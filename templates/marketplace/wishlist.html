@@ -1,0 +1,100 @@
+{% extends "layouts/base.html" %}
+{% block page_title %}Wishlist{% endblock %}
+{% block page_subtitle %}Your saved favorite products{% endblock %}
+
+{% block extra_head %}
+<style>
+  .wishlist-card { background:#fff; border-radius:14px; border:1px solid #f3f4f6; box-shadow:0 1px 3px rgba(0,0,0,0.04); display:flex; gap:1rem; padding:1rem; align-items:center; transition:all 0.2s; }
+  .wishlist-card:hover { box-shadow:0 6px 20px rgba(0,63,177,0.06); }
+  .wl-img { width:100px; height:100px; border-radius:10px; object-fit:cover; background:#f3f4f6; flex-shrink:0; }
+  .btn { padding:0.5rem 1rem; border-radius:10px; font-weight:700; font-size:0.8rem; cursor:pointer; transition:all 0.2s; border:none; display:inline-flex; align-items:center; gap:0.35rem; }
+  .btn-primary { background:var(--primary,#003fb1); color:#fff; } .btn-primary:hover { background:#1a56db; }
+  .btn-outline { background:#fff; color:#374151; border:1.5px solid #e5e7eb; } .btn-outline:hover { border-color:var(--primary,#003fb1); color:var(--primary,#003fb1); }
+  .btn-danger { background:#fef2f2; color:#dc2626; } .btn-danger:hover { background:#fee2e2; }
+  @media(max-width:640px){ .wishlist-card{flex-direction:column;align-items:flex-start} .wl-img{width:100%;height:160px} }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+  <div id="wl-loading">
+    <div class="skeleton h-28 rounded-2xl mb-3"></div><div class="skeleton h-28 rounded-2xl mb-3"></div><div class="skeleton h-28 rounded-2xl mb-3"></div>
+  </div>
+  <div id="wl-list"></div>
+  <div id="wl-empty" class="hidden text-center py-16">
+    <i data-lucide="heart" class="w-16 h-16 text-gray-200 mx-auto mb-4"></i>
+    <h2 class="text-xl font-bold text-gray-500" style="font-family:'Hanken Grotesk',sans-serif">Your wishlist is empty</h2>
+    <p class="text-gray-400 mt-1 mb-5">Save products you love and come back to them anytime.</p>
+    <a href="/marketplace/" class="btn btn-primary"><i data-lucide="shopping-bag" class="w-4 h-4"></i> Browse Products</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const API = '/api/marketplace';
+
+async function loadWishlist() {
+  var token = localStorage.getItem('access_token');
+  if (!token) { window.location.href = '/signin/'; return; }
+  try {
+    var res = await fetch(API+'/wishlist/', {headers:{'Authorization':'Bearer '+token}});
+    if (!res.ok) throw new Error('Failed');
+    var products = await res.json();
+    document.getElementById('wl-loading').classList.add('hidden');
+
+    if (!products.length) {
+      document.getElementById('wl-empty').classList.remove('hidden');
+      lucide.createIcons(); return;
+    }
+
+    document.getElementById('wl-list').innerHTML = products.map(function(p){
+      var img = (p.images&&p.images[0])?p.images[0].url:(p.image||'https://placehold.co/200/f3f4f6/9ca3af');
+      return '<div class="wishlist-card" data-wl-id="'+p.id+'">' +
+        '<img src="'+img+'" class="wl-img" onerror="this.src=\'https://placehold.co/200/f3f4f6/9ca3af\'">' +
+        '<div class="flex-1">' +
+          '<h3 class="font-bold text-gray-900">'+p.name+'</h3>' +
+          '<p class="text-xs text-gray-400">'+ (p.category||'') +' · '+p.seller_name+'</p>' +
+          '<div class="flex items-center gap-2 mt-1"><span class="text-yellow-500 text-sm">'+'★'.repeat(Math.round(p.rating||0))+'</span><span class="text-xs text-gray-400">('+(p.review_count||0)+')</span></div>' +
+          '<p class="text-lg font-bold text-[var(--primary)] mt-1">Rs. '+p.price.toLocaleString()+'</p>' +
+        '</div>' +
+        '<div class="flex flex-col gap-2">' +
+          '<button onclick="moveToCart(\''+p.id+'\')" class="btn btn-primary"><i data-lucide="shopping-cart" class="w-4 h-4"></i> Add to Cart</button>' +
+          '<button onclick="removeWishlist(\''+p.id+'\')" class="btn btn-danger"><i data-lucide="trash-2" class="w-4 h-4"></i> Remove</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+    lucide.createIcons();
+  } catch(e) { document.getElementById('wl-loading').innerHTML = '<p class="text-center py-10 text-gray-400">Could not load wishlist</p>'; }
+}
+
+async function moveToCart(pid) {
+  var token = localStorage.getItem('access_token');
+  try {
+    var res = await fetch(API+'/cart/', {method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}, body:JSON.stringify({product_id:pid, quantity:1})});
+    if (res.ok) { showToast('Added to cart!','success'); if (window.updateCartBadge) window.updateCartBadge(); }
+  } catch(e) {}
+}
+
+function removeWishlist(pid) {
+  // Remove from DOM instantly
+  var el = document.querySelector('[data-wl-id="'+pid+'"]');
+  if (el) { el.style.opacity = '0'; el.style.transform = 'translateX(20px)'; setTimeout(function(){ el.remove(); checkEmpty(); }, 200); }
+  showToast('Removed from wishlist','info');
+  // Sync with backend
+  var token = localStorage.getItem('access_token');
+  fetch(API+'/wishlist/', {method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}, body:JSON.stringify({product_id:pid})}).catch(function(){});
+}
+
+function checkEmpty() {
+  var remaining = document.querySelectorAll('[data-wl-id]').length;
+  if (remaining === 0) {
+    document.getElementById('wl-list').innerHTML = '';
+    document.getElementById('wl-empty').classList.remove('hidden');
+    lucide.createIcons();
+  }
+}
+
+loadWishlist();
+</script>
+{% endblock %}

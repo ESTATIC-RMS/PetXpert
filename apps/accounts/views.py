@@ -9,7 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import render, get_object_or_404
 from django.conf import settings
 from django.db.models import Avg, Count
-from .models import User, UserRole, VeterinarianProfile, VeterinarianReview
+from .models import User, UserRole, VeterinarianProfile, VeterinarianReview, SellerProfile
 from .serializers import UserSerializer, VeterinarianProfileSerializer, VeterinarianReviewSerializer
 
 
@@ -23,6 +23,7 @@ def _recalculate_vet_rating(veterinarian):
     veterinarian.rating_count = agg['count'] or 0
     veterinarian.save(update_fields=['avg_rating', 'rating_count'])
 
+@method_decorator(csrf_exempt, name='dispatch')
 class SignupView(APIView):
     permission_classes = [AllowAny]
 
@@ -47,6 +48,9 @@ class SignupView(APIView):
 
         if role == UserRole.VETERINARIAN:
             VeterinarianProfile.objects.create(user=user)
+        elif role == UserRole.SELLER:
+            store_name = request.data.get('store_name', '') or f"{full_name}'s Store"
+            SellerProfile.objects.create(user=user, store_name=store_name)
 
         refresh = RefreshToken.for_user(user)
         
@@ -569,4 +573,6 @@ class DashboardStatsView(APIView):
                 'pending_appointments': pending_appointments[:5],
             })
 
+        elif user.role == UserRole.SELLER:
+            return Response({'role': 'SELLER', 'stats': {}})
         return Response({'error': 'Unsupported role'}, status=400)

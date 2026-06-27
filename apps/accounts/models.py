@@ -20,6 +20,7 @@ class UserManager(BaseUserManager):
 class UserRole(models.TextChoices):
     PET_OWNER = 'PET_OWNER', 'Pet Owner'
     VETERINARIAN = 'VETERINARIAN', 'Veterinarian'
+    SELLER = 'SELLER', 'Seller'
     ADMIN = 'ADMIN', 'Admin'
 
 class User(AbstractBaseUser, PermissionsMixin, BaseModel):
@@ -80,3 +81,20 @@ class VeterinarianReview(BaseModel):
             models.CheckConstraint(condition=models.Q(rating__gte=1) & models.Q(rating__lte=5), name='chk_rating_range')
         ]
         ordering = ['-created_at']
+
+
+class SellerProfile(BaseModel):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='seller_profile')
+    store_name = models.CharField(max_length=255, unique=True)
+    store_description = models.TextField(max_length=1000, blank=True)
+    store_logo = models.ImageField(upload_to='sellers/logos/', null=True, blank=True)
+    phone_number = models.CharField(max_length=20, blank=True, null=True)
+    address = models.TextField(blank=True, null=True)
+    is_verified = models.BooleanField(default=False, db_index=True)
+    total_products = models.IntegerField(default=0)
+    total_sales = models.IntegerField(default=0)
+    avg_rating = models.DecimalField(max_digits=3, decimal_places=2, default=0)
+    class Meta:
+        db_table = 'users_sellerprofile'
+    def __str__(self):
+        return self.store_name

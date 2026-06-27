@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     'apps.notifications',
     'apps.payments',
     'apps.chat',
+    'apps.marketplace',
     'rest_framework',
     'rest_framework_simplejwt',
 ]

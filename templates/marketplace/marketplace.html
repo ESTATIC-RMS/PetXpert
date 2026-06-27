@@ -1,0 +1,295 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block page_title %}Pet Marketplace{% endblock %}
+{% block page_subtitle %}Premium products for your furry friends{% endblock %}
+
+{% block extra_head %}
+<style>
+  :root {
+    --card-radius: 14px;
+    --card-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --card-hover-shadow: 0 10px 25px rgba(0,63,177,0.08), 0 4px 10px rgba(0,0,0,0.04);
+  }
+  .marketplace-wrapper { width: 100%; }
+
+  /* Hero */
+  .hero-section {
+    background: linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 40%, #fef7ed 100%);
+    border-radius: 20px; overflow: hidden; position: relative;
+    display: flex; align-items: center; min-height: 240px;
+  }
+  .hero-section { min-height: 260px; }
+  .hero-content { padding: 3rem 3rem; position: relative; z-index: 2; max-width: 50%; }
+  .hero-content h1 { font-family: 'Hanken Grotesk', sans-serif; font-size: 2.25rem; font-weight: 700; color: #111827; margin-bottom: 0.5rem; }
+  .hero-content p { color: #6b7280; font-size: 1rem; line-height: 1.6; max-width: 520px; margin-bottom: 1.25rem; }
+  .hero-image {
+    position: absolute; right: 0; bottom: 0; width: 50%; height: 100%;
+    background: url('https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=800&h=500&fit=crop') center/cover no-repeat;
+    opacity: 0.22; border-radius: 0;
+  }
+  @media (max-width: 768px) {
+    .hero-content { max-width: 100%; padding: 2rem 1.5rem; }
+    .hero-content h1 { font-size: 1.5rem; }
+    .hero-image { opacity: 0.10; width: 100%; }
+  }
+
+  /* Buttons */
+  .btn-primary {
+    background: var(--primary, #003fb1); color: #fff; padding: 0.7rem 1.5rem;
+    border-radius: 12px; font-weight: 700; font-size: 0.875rem;
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    transition: all 0.2s; border: none; cursor: pointer; text-decoration: none;
+  }
+  .btn-primary:hover { background: #1a56db; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,63,177,0.3); }
+  .btn-outline {
+    background: #fff; color: #374151; border: 1.5px solid #e5e7eb;
+    padding: 0.55rem 1rem; border-radius: 10px; font-weight: 600; font-size: 0.8rem;
+    cursor: pointer; transition: all 0.2s; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem;
+  }
+  .btn-outline:hover { border-color: var(--primary, #003fb1); color: var(--primary, #003fb1); }
+
+  /* Filter bar */
+  .filter-input { padding:0.6rem 1rem 0.6rem 2.5rem; border:1.5px solid #e5e7eb; border-radius:10px; font-size:0.85rem; width:100%; transition:all 0.2s; background:#fff; }
+  .filter-input:focus { outline:none; border-color:var(--primary,#003fb1); box-shadow:0 0 0 3px rgba(0,63,177,0.06); }
+  .filter-select { padding:0.6rem 1rem; border:1.5px solid #e5e7eb; border-radius:10px; font-size:0.85rem; background:#fff; cursor:pointer; min-width:180px; }
+
+  /* Product card */
+  .product-card {
+    background: #fff; border-radius: var(--card-radius); border: 1px solid #f3f4f6;
+    box-shadow: var(--card-shadow); overflow: hidden; transition: all 0.25s;
+    display: flex; flex-direction: column;
+  }
+  .product-card:hover { box-shadow: var(--card-hover-shadow); transform: translateY(-3px); }
+  .product-card .img-wrap {
+    position: relative; background: #fafafa; padding: 1.5rem;
+    display: flex; align-items: center; justify-content: center; height: 200px;
+  }
+  .product-card .img-wrap img { max-height: 100%; max-width: 100%; object-fit: contain; }
+  .product-card .badge-discount {
+    position: absolute; top: 0.75rem; left: 0.75rem;
+    background: #ef4444; color: #fff; font-size: 0.7rem; font-weight: 700;
+    padding: 0.25rem 0.6rem; border-radius: 6px; z-index: 1;
+  }
+  .product-card .btn-wishlist {
+    position: absolute; top: 0.75rem; right: 0.75rem;
+    width: 32px; height: 32px; border-radius: 50%; background: #fff;
+    border: 1px solid #f3f4f6; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.2s; z-index: 1; font-size: 0.9rem;
+  }
+  .product-card .btn-wishlist:hover { border-color: #fca5a5; color: #ef4444; }
+  .product-card .btn-wishlist.active { color: #ef4444; fill: #ef4444; }
+  .product-card .card-body { padding: 1rem 1.1rem 1.1rem; flex: 1; display: flex; flex-direction: column; }
+  .product-card .card-category { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--primary, #003fb1); margin-bottom: 0.35rem; }
+  .product-card .card-title { font-family: 'Hanken Grotesk', sans-serif; font-weight: 700; font-size: 1rem; color: #111827; margin-bottom: 0.2rem; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+  .product-card .card-desc { font-size: 0.78rem; color: #9ca3af; margin-bottom: 0.5rem; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+  .product-card .card-rating { display: flex; align-items: center; gap: 0.3rem; margin-bottom: 0.5rem; font-size: 0.75rem; }
+  .product-card .card-rating .stars { color: #f59e0b; }
+  .product-card .card-rating .count { color: #9ca3af; }
+  .product-card .card-prices { display: flex; align-items: baseline; gap: 0.5rem; margin-top: auto; margin-bottom: 0.75rem; }
+  .product-card .card-price { font-size: 1.15rem; font-weight: 700; color: var(--primary, #003fb1); }
+  .product-card .card-price-old { font-size: 0.8rem; color: #9ca3af; text-decoration: line-through; }
+  .product-card .card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+
+  /* Section header */
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem; }
+  .section-header h2 { font-family: 'Hanken Grotesk', sans-serif; font-size: 1.3rem; font-weight: 700; color: #111827; }
+  .section-header p { font-size: 0.8rem; color: #9ca3af; margin-top: 0.15rem; }
+
+  /* Skeleton */
+  .skeleton { background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 8px; }
+  @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+  /* Sort dropdown */
+  .sort-select { padding: 0.55rem 2rem 0.55rem 1rem; border: 1.5px solid #e5e7eb; border-radius: 10px; font-size: 0.8rem; font-weight: 600; color: #374151; background: #fff; cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.6rem center; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="marketplace-wrapper">
+
+  <!-- Hero Banner -->
+  <div class="hero-section mb-6">
+    <div class="hero-content">
+      <h1>Pet Marketplace</h1>
+      <p>Premium products for your pets. Food, toys, and accessories curated for your best friends.</p>
+      <a href="#products-section" class="btn-primary"><i data-lucide="sparkles" class="w-4 h-4"></i> Explore New Arrivals</a>
+    </div>
+    <div class="hero-image"></div>
+  </div>
+
+  <!-- Search + Filter Bar -->
+  <div class="flex flex-col sm:flex-row gap-3 mb-6">
+    <div class="relative flex-1">
+      <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
+      <input class="filter-input" id="filter-search" placeholder="Search products..." oninput="filterProducts()">
+    </div>
+    <select class="filter-select" id="filter-category" onchange="filterProducts()">
+      <option value="">All Categories</option>
+    </select>
+  </div>
+
+  <!-- Trending Products Header -->
+  <div class="section-header" id="products-section">
+    <div>
+      <h2>Trending Products</h2>
+      <p>Top-rated supplies based on expert reviews</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="text-xs text-gray-400 font-semibold hidden sm:inline">Sort by:</span>
+      <select class="sort-select" id="sort-by" onchange="loadProducts()">
+        <option value="-sales_count">Popularity</option>
+        <option value="-created_at">Newest</option>
+        <option value="price">Price: Low to High</option>
+        <option value="-price">Price: High to Low</option>
+        <option value="-rating">Top Rated</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Product Grid -->
+  <div id="product-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5 mb-8">
+    <div class="skeleton h-[380px] rounded-[14px]"></div><div class="skeleton h-[380px] rounded-[14px]"></div>
+    <div class="skeleton h-[380px] rounded-[14px]"></div><div class="skeleton h-[380px] rounded-[14px]"></div>
+    <div class="skeleton h-[380px] rounded-[14px]"></div><div class="skeleton h-[380px] rounded-[14px]"></div>
+    <div class="skeleton h-[380px] rounded-[14px]"></div><div class="skeleton h-[380px] rounded-[14px]"></div>
+  </div>
+  <div id="empty-state" class="hidden text-center py-16">
+    <i data-lucide="package-search" class="w-16 h-16 text-gray-300 mx-auto mb-4"></i>
+    <h3 class="text-xl font-bold text-gray-400" style="font-family:'Hanken Grotesk',sans-serif">No products found</h3>
+    <p class="text-gray-400 text-sm mt-1">Try a different category or search term</p>
+  </div>
+
+  <!-- Pagination -->
+  <div id="pagination" class="flex justify-center gap-2 mb-8"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const API = '/api/marketplace';
+let currentPage = 1;
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadCategories();
+  loadProducts();
+  setActiveSidebar();
+  lucide.createIcons();
+});
+
+function setActiveSidebar() {
+  document.querySelectorAll('.sidebar-item').forEach(e => e.classList.remove('sidebar-item-active'));
+  const link = document.querySelector('a[href="/marketplace/"]');
+  if (link) link.classList.add('sidebar-item-active');
+}
+
+async function loadCategories() {
+  try {
+    const res = await fetch(API + '/categories/');
+    const cats = await res.json();
+    const sel = document.getElementById('filter-category');
+    cats.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.slug; opt.textContent = c.name;
+      sel.appendChild(opt);
+    });
+  } catch(e) {}
+}
+
+function filterProducts() {
+  currentPage = 1;
+  loadProducts();
+}
+
+async function loadProducts() {
+  const grid = document.getElementById('product-grid');
+  grid.innerHTML = '<div class="skeleton h-[380px] rounded-[14px]"></div>'.repeat(8);
+
+  const params = new URLSearchParams({ page: currentPage });
+  const cat = document.getElementById('filter-category').value;
+  const search = document.getElementById('filter-search').value.trim();
+  if (cat) params.set('category', cat);
+  if (search) params.set('search', search);
+  params.set('sort', document.getElementById('sort-by').value);
+
+  try {
+    const res = await fetch(API + '/products/?' + params);
+    const data = await res.json();
+    grid.innerHTML = '';
+
+    if (!data.products || !data.products.length) {
+      document.getElementById('empty-state').classList.remove('hidden');
+      return;
+    }
+    document.getElementById('empty-state').classList.add('hidden');
+
+    data.products.forEach(p => {
+      const img = (p.images && p.images[0]) ? p.images[0].url : (p.image || 'https://placehold.co/400x350/f3f4f6/9ca3af?text=No+Image');
+      const stars = '★'.repeat(Math.round(p.rating)) + '☆'.repeat(5 - Math.round(p.rating));
+      const discount = p.discount_percent ? '<span class="badge-discount">-' + p.discount_percent + '%</span>' : '';
+
+      const card = document.createElement('div');
+      card.className = 'product-card';
+      card.innerHTML =
+        '<div class="img-wrap">' +
+          discount +
+          '<button class="btn-wishlist" onclick="event.stopPropagation();toggleWishlist(\'' + p.id + '\', this)" title="Wishlist">♡</button>' +
+          '<img src="' + img + '" alt="' + p.name + '" loading="lazy" onerror="this.src=\'https://placehold.co/400x350/f3f4f6/9ca3af?text=No+Image\'">' +
+        '</div>' +
+        '<div class="card-body">' +
+          '<span class="card-category">' + (p.category || 'General') + '</span>' +
+          '<h3 class="card-title" title="' + p.name + '">' + p.name + '</h3>' +
+          '<p class="card-desc">' + (p.description || 'Premium pet product').substring(0, 60) + '</p>' +
+          '<div class="card-rating"><span class="stars">' + stars + '</span><span class="count">(' + p.review_count + ')</span></div>' +
+          '<div class="card-prices"><span class="card-price">Rs. ' + p.price.toLocaleString() + '</span>' + (p.compare_at_price ? '<span class="card-price-old">Rs. ' + p.compare_at_price.toLocaleString() + '</span>' : '') + '</div>' +
+          '<div class="card-actions">' +
+            '<a href="/marketplace/product/' + p.id + '/" class="btn-outline">Details</a>' +
+            '<button onclick="addToCart(\'' + p.id + '\')" class="btn-primary" style="padding:0.55rem 0.75rem;font-size:0.8rem;justify-content:center" ' + (p.is_in_stock ? '' : 'disabled') + '><i data-lucide="shopping-cart" class="w-3.5 h-3.5"></i> ' + (p.is_in_stock ? 'Add' : 'Sold') + '</button>' +
+          '</div>' +
+        '</div>';
+      grid.appendChild(card);
+    });
+
+    renderPagination(data.pages, data.current_page);
+    lucide.createIcons();
+  } catch(e) {
+    grid.innerHTML = '<div class="col-span-full text-center py-16 text-gray-400"><i data-lucide="wifi-off" class="w-10 h-10 mx-auto mb-3"></i><p class="font-semibold">Could not load products</p></div>';
+    lucide.createIcons();
+  }
+}
+
+function renderPagination(pages, current) {
+  const el = document.getElementById('pagination');
+  if (!pages || pages <= 1) { el.innerHTML = ''; return; }
+  let html = '';
+  for (let i = 1; i <= pages; i++) {
+    html += '<button onclick="currentPage=' + i + ';loadProducts();window.scrollTo({top:0,behavior:\'smooth\'})" class="w-9 h-9 rounded-lg font-bold text-sm transition-all ' + (i === current ? 'bg-[var(--primary)] text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-[var(--primary)]') + '">' + i + '</button>';
+  }
+  el.innerHTML = html;
+}
+
+async function addToCart(pid) {
+  const token = localStorage.getItem('access_token');
+  if (!token) { window.location.href = '/signin/'; return; }
+  try {
+    const res = await fetch(API + '/cart/', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ product_id: pid, quantity: 1 }) });
+    const d = await res.json();
+    if (!res.ok) { showToast(d.quantity || d.product_id || 'Error', 'error'); return; }
+    showToast('Added to cart!', 'success');
+    if (window.updateCartBadge) window.updateCartBadge();
+  } catch(e) {}
+}
+
+async function toggleWishlist(pid, btn) {
+  const token = localStorage.getItem('access_token');
+  if (!token) { window.location.href = '/signin/'; return; }
+  try {
+    const res = await fetch(API + '/wishlist/', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify({ product_id: pid }) });
+    const d = await res.json();
+    btn.innerHTML = d.wishlisted ? '♥' : '♡';
+    btn.classList.toggle('active', d.wishlisted);
+    showToast(d.wishlisted ? 'Added to wishlist!' : 'Removed from wishlist', d.wishlisted ? 'success' : 'info');
+  } catch(e) {}
+}
+</script>
+{% endblock %}

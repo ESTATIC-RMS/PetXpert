@@ -52,7 +52,7 @@ def diagnosis_page(request):
     return render(request, 'diagnosis/diagnosis.html')
 
 def marketplace_page(request):
-    return render(request, 'marketplace/home.html')
+    return render(request, 'marketplace/marketplace.html')
 
 def marketplace_product_page(request, product_id):
     return render(request, 'marketplace/product_detail.html', {'product_id': product_id})
@@ -69,29 +69,32 @@ def marketplace_order_confirmation_page(request):
 def marketplace_orders_page(request):
     return render(request, 'marketplace/orders.html')
 
+def marketplace_wishlist_page(request):
+    return render(request, 'marketplace/wishlist.html')
+
 def marketplace_buyer_dashboard_page(request):
-    return render(request, 'marketplace/buyer_dashboard.html')
+    return render(request, 'marketplace/orders.html')
 
 def seller_profile_complete_page(request):
-    return render(request, 'marketplace/seller/profile_complete.html')
+    return render(request, 'marketplace/seller_dashboard.html')
 
 def seller_dashboard_page(request):
-    return render(request, 'marketplace/seller/dashboard.html')
+    return render(request, 'marketplace/seller_dashboard.html')
 
 def seller_products_page(request):
-    return render(request, 'marketplace/seller/products.html')
+    return render(request, 'marketplace/inventory.html')
 
 def seller_add_product_page(request):
-    return render(request, 'marketplace/seller/add_product.html')
+    return render(request, 'marketplace/inventory_add.html')
 
 def seller_orders_page(request):
-    return render(request, 'marketplace/seller/orders.html')
+    return render(request, 'marketplace/orders.html')
 
 def seller_inventory_page(request):
-    return render(request, 'marketplace/seller/inventory.html')
+    return render(request, 'marketplace/inventory.html')
 
 def seller_reviews_page(request):
-    return render(request, 'marketplace/seller/reviews.html')
+    return render(request, 'marketplace/seller_dashboard.html')
 
 def marketplace_admin_page(request):
     return render(request, 'marketplace/admin/dashboard.html')
@@ -110,6 +113,10 @@ urlpatterns = [
     path('marketplace/checkout/', marketplace_checkout_page, name='marketplace_checkout_page'),
     path('marketplace/order-confirmation/', marketplace_order_confirmation_page, name='marketplace_order_confirmation_page'),
     path('marketplace/orders/', marketplace_orders_page, name='marketplace_orders_page'),
+    path('marketplace/orders/manage/', marketplace_orders_page, name='marketplace_orders_manage'),
+    path('marketplace/wishlist/', marketplace_wishlist_page, name='marketplace_wishlist'),
+    path('marketplace/inventory/', seller_inventory_page, name='marketplace_inventory'),
+    path('marketplace/inventory/add/', seller_add_product_page, name='marketplace_inventory_add'),
     path('marketplace/dashboard/', marketplace_buyer_dashboard_page, name='marketplace_buyer_dashboard_page'),
     path('marketplace/seller/complete-profile/', seller_profile_complete_page, name='seller_profile_complete'),
     path('marketplace/seller/dashboard/', seller_dashboard_page, name='seller_dashboard_page'),
@@ -152,7 +159,7 @@ urlpatterns = [
     path('api/dashboard/stats/', DashboardStatsView.as_view(), name='api_dashboard_stats'),
     path('api/prescriptions/', include('apps.prescriptions.urls')),
     path('api/notifications/', include('apps.notifications.urls')),
-    # path('api/marketplace/', include('apps.marketplace.urls')),  # Temporarily disabled - app not created yet
+    path('api/marketplace/', include('apps.marketplace.urls')),
     # Payment endpoints
     path('api/payments/create-checkout-session/', CreateCheckoutSessionView.as_view(), name='api_create_checkout_session'),
     path('payment/', payment_page, name='payment_page'),

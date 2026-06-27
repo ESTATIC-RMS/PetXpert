@@ -1,0 +1,166 @@
+{% extends "layouts/base.html" %}
+{% block page_title %}Product Details{% endblock %}
+{% block page_subtitle %}<button onclick="history.back()" class="inline-flex items-center gap-1 text-gray-400 hover:text-[var(--primary)] font-bold text-sm mr-2 transition-colors"><i data-lucide="arrow-left" class="w-4 h-4"></i> Back</button> <a href="/marketplace/" class="text-[var(--primary)] hover:underline">Marketplace</a> > <span id="breadcrumb-cat">Product</span>{% endblock %}
+
+{% block extra_head %}
+<style>
+  .gallery-main { width:100%; aspect-ratio:1; object-fit:cover; border-radius:16px; background:#f9fafb; }
+  .gallery-thumb { width:72px; height:72px; border-radius:10px; object-fit:cover; cursor:pointer; border:2px solid transparent; transition:all 0.2s; opacity:0.7; }
+  .gallery-thumb:hover,.gallery-thumb.active { border-color:var(--primary,#003fb1); opacity:1; }
+  .qty-ctrl { display:inline-flex; align-items:center; border:1.5px solid #e5e7eb; border-radius:10px; overflow:hidden; }
+  .qty-ctrl button { width:38px; height:38px; border:none; background:#f9fafb; font-size:1.1rem; font-weight:700; cursor:pointer; }
+  .qty-ctrl button:hover { background:#f3f4f6; }
+  .qty-ctrl span { width:50px; text-align:center; font-weight:700; font-size:0.95rem; }
+  .btn { padding:0.75rem 1.75rem; border-radius:12px; font-weight:700; font-size:0.9rem; cursor:pointer; transition:all 0.2s; display:inline-flex; align-items:center; gap:0.5rem; border:none; text-decoration:none; }
+  .btn-primary { background:var(--primary,#003fb1); color:#fff; } .btn-primary:hover { background:#1a56db; transform:translateY(-1px); box-shadow:0 6px 20px rgba(0,63,177,0.25); }
+  .btn-outline { background:#fff; color:#374151; border:1.5px solid #e5e7eb; } .btn-outline:hover { border-color:var(--primary,#003fb1); color:var(--primary,#003fb1); }
+  .btn-wish { width:48px; height:48px; border-radius:12px; border:1.5px solid #e5e7eb; background:#fff; cursor:pointer; font-size:1.3rem; transition:all 0.2s; display:flex; align-items:center; justify-content:center; }
+  .btn-wish:hover { border-color:#fca5a5; } .btn-wish.active { color:#ef4444; border-color:#fca5a5; background:#fef2f2; }
+  .perk-badge { display:inline-flex; align-items:center; gap:0.35rem; font-size:0.78rem; color:#6b7280; font-weight:500; }
+  .rec-card { background:#fff; border-radius:14px; border:1px solid #f3f4f6; box-shadow:0 1px 3px rgba(0,0,0,0.04); padding:0.75rem; text-align:center; transition:all 0.2s; }
+  .rec-card:hover { box-shadow:0 8px 24px rgba(0,63,177,0.06); transform:translateY(-3px); }
+  .rec-card img { width:100%; height:140px; object-fit:cover; border-radius:10px; margin-bottom:0.5rem; }
+  @media(max-width:768px){ .gallery-thumb{width:56px;height:56px} }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="product-container" class="max-w-6xl mx-auto">
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <div class="skeleton rounded-2xl" style="aspect-ratio:1"></div>
+    <div><div class="skeleton h-6 w-24 rounded mb-3"></div><div class="skeleton h-8 w-3/4 rounded mb-2"></div><div class="skeleton h-5 w-1/2 rounded mb-4"></div><div class="skeleton h-32 rounded"></div></div>
+  </div>
+  <div class="skeleton h-64 rounded-2xl mt-10"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const API = '/api/marketplace';
+const productId = '{{ product_id }}';
+let productData = null;
+let qty = 1;
+
+async function loadProduct() {
+  try {
+    var res = await fetch(API+'/products/'+productId+'/');
+    productData = await res.json();
+    renderProduct();
+    lucide.createIcons();
+  } catch(e) { document.getElementById('product-container').innerHTML = '<p class="text-center py-20 text-gray-400">Product not found.</p>'; }
+}
+
+function renderProduct() {
+  var p = productData;
+  var images = (p.images && p.images.length) ? p.images.map(function(i){return i.url;}) : [p.image || 'https://placehold.co/600/f3f4f6/9ca3af?text=No+Image'];
+  var mainImg = images[0];
+  var discount = p.discount_percent;
+  var stars = '★'.repeat(Math.round(p.rating)) + '☆'.repeat(5-Math.round(p.rating));
+
+  // Breadcrumb
+  document.getElementById('breadcrumb-cat').textContent = (p.category||'Product') + ' > ' + p.name;
+
+  // Thumbnails
+  var thumbs = images.map(function(url,i){
+    return '<img src="'+url+'" class="gallery-thumb'+(i===0?' active':'')+'" onclick="switchImage(\''+url+'\',this)" onerror="this.src=\'https://placehold.co/80/f3f4f6\'">';
+  }).join('');
+
+  // Related
+  var related = (p.related_products||[]).slice(0,4).map(function(r){
+    var img = (r.images&&r.images[0])?r.images[0].url:(r.image||'https://placehold.co/200/f3f4f6/9ca3af');
+    return '<a href="/marketplace/product/'+r.id+'/" class="rec-card"><img src="'+img+'" onerror="this.src=\'https://placehold.co/200/f3f4f6\'"><p class="text-xs font-bold uppercase text-gray-400">'+(r.category||r.seller_name||'')+'</p><h4 class="font-bold text-sm line-clamp-1">'+r.name+'</h4><p class="text-sm font-bold text-[var(--primary)]">Rs. '+r.price.toLocaleString()+'</p></a>';
+  }).join('');
+
+  document.getElementById('product-container').innerHTML =
+    '<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">' +
+      // Left: Gallery
+      '<div>' +
+        '<img src="'+mainImg+'" class="gallery-main mb-3" id="main-image" onerror="this.src=\'https://placehold.co/600/f3f4f6\'">' +
+        (images.length>1 ? '<div class="flex gap-2 overflow-x-auto pb-1">'+thumbs+'</div>' : '') +
+      '</div>' +
+      // Right: Info
+      '<div>' +
+        '<span class="inline-block text-xs font-bold text-green-700 bg-green-50 px-3 py-1 rounded-full mb-3">'+(p.is_in_stock?'IN STOCK':'OUT OF STOCK')+'</span>' +
+        '<h1 class="text-2xl lg:text-3xl font-bold text-gray-900 mb-2" style="font-family:\'Hanken Grotesk\',sans-serif">'+p.name+'</h1>' +
+        '<div class="flex items-center gap-2 mb-3"><span class="text-yellow-500">'+stars+'</span><span class="text-sm font-bold">'+p.rating+'</span><a href="javascript:void(0)" onclick="toggleReviews()" class="text-xs text-gray-400 hover:underline">('+p.review_count+' reviews)</a></div>' +
+        '<p class="text-sm text-gray-500 mb-4">Seller: <span class="font-bold text-gray-700">'+p.seller_name+'</span></p>' +
+        '<div class="flex items-baseline gap-3 mb-4">' +
+          '<span class="text-3xl font-bold text-[var(--primary)]">Rs. '+p.price.toLocaleString()+'</span>' +
+          (p.compare_at_price ? '<span class="text-lg text-gray-400 line-through">Rs. '+p.compare_at_price.toLocaleString()+'</span>' : '') +
+          (discount ? '<span class="bg-orange-100 text-orange-700 text-sm font-bold px-3 py-1 rounded-full">Save '+discount+'%</span>' : '') +
+        '</div>' +
+        '<p class="text-gray-600 leading-relaxed mb-5">'+(p.description||'No description available.')+'</p>' +
+        (p.pet_type ? '<span class="inline-block text-xs bg-gray-100 px-3 py-1 rounded-full mb-4">'+p.pet_type+'</span>' : '') +
+        // Quantity + Actions
+        '<div class="flex items-center gap-4 mb-5 flex-wrap">' +
+          '<div class="qty-ctrl"><button onclick="changeQty(-1)">−</button><span id="qty-display">1</span><button onclick="changeQty(1)">+</button></div>' +
+          '<button class="btn btn-primary flex-1 justify-center" onclick="addToCart()" '+(p.is_in_stock?'':'disabled')+'><i data-lucide="shopping-cart" class="w-5 h-5"></i> '+(p.is_in_stock?'Add to Cart':'Sold Out')+'</button>' +
+          '<button class="btn-wish'+(p.is_wishlisted?' active':'')+'" id="wishlist-btn" onclick="toggleWishlist()">'+(p.is_wishlisted?'♥':'♡')+'</button>' +
+        '</div>' +
+        // Perks
+        '<div class="flex gap-5 text-sm">' +
+          '<span class="perk-badge"><i data-lucide="truck" class="w-4 h-4 text-green-600"></i> Free Shipping</span>' +
+          '<span class="perk-badge"><i data-lucide="shield-check" class="w-4 h-4 text-green-600"></i> Quality Guaranteed</span>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+    // Reviews Section (hidden by default)
+    '<div id="reviews-section" class="hidden mt-8 bg-white rounded-2xl border border-gray-100 card-shadow p-6">' +
+      '<div class="flex items-center justify-between mb-4"><h2 class="text-xl font-bold" style="font-family:\'Hanken Grotesk\',sans-serif\">Reviews ('+p.review_count+')</h2><button onclick="toggleReviews()" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-5 h-5"></i></button></div>' +
+      '<div id="reviews-content">' +
+        (p.reviews && p.reviews.length ? p.reviews.map(function(r){var currentUserId = (function(){try{return JSON.parse(localStorage.getItem('user')||'{}').id;}catch(e){return null;}})(); var isOwn = currentUserId && r.user_id === currentUserId; return '<div class="border-b border-gray-100 py-3 last:border-0"><div class="flex items-center gap-2"><span class="text-yellow-500">' + '★'.repeat(r.rating) + '</span><span class="text-sm font-bold">' + r.user_name + '</span><span class="text-xs text-gray-400">' + new Date(r.created_at).toLocaleDateString() + '</span>' + (isOwn ? '<button onclick="deleteReview(\''+r.id+'\')" class="ml-auto text-xs text-red-500 hover:text-red-700 font-bold">Remove</button>' : '') + '</div><p class="text-gray-600 text-sm mt-1">' + (r.comment||'') + '</p></div>';}).join('') : '<p class="text-gray-400 text-sm text-center py-4">No reviews yet. Be the first to review!</p>') +
+      '</div>' +
+    '</div>' +
+    // You May Also Like
+    (related ? '<div class="mt-10"><div class="flex items-center justify-between mb-4"><h2 class="text-xl font-bold" style="font-family:\'Hanken Grotesk\',sans-serif">You May Also Like</h2><a href="/marketplace/" class="text-sm text-[var(--primary)] font-bold hover:underline">View All</a></div><div class="grid grid-cols-2 md:grid-cols-4 gap-4">'+related+'</div></div>' : '');
+
+  lucide.createIcons();
+}
+
+function switchImage(url, el) {
+  document.getElementById('main-image').src = url;
+  document.querySelectorAll('.gallery-thumb').forEach(function(t){ t.classList.remove('active'); });
+  el.classList.add('active');
+}
+
+function toggleReviews() {
+  var el = document.getElementById('reviews-section');
+  if (el) el.classList.toggle('hidden');
+}
+function changeQty(delta) { qty = Math.max(1, qty+delta); document.getElementById('qty-display').textContent = qty; }
+
+async function deleteReview(reviewId) {
+  if (!confirm('Remove your review?')) return;
+  var token = localStorage.getItem('access_token');
+  try {
+    await fetch(API+'/products/'+productId+'/review/', {method:'DELETE', headers:{'Authorization':'Bearer '+token}});
+    showToast('Review removed','info');
+    loadProduct();
+  } catch(e) {}
+}
+
+async function addToCart() {
+  var token = localStorage.getItem('access_token');
+  if (!token) { window.location.href = '/signin/'; return; }
+  try {
+    var res = await fetch(API+'/cart/', {method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({product_id:productId,quantity:qty})});
+    if (res.ok) { showToast('Added to cart!','success'); if (window.updateCartBadge) window.updateCartBadge(); } else { var d=await res.json(); showToast(d.quantity||'Error','error'); }
+  } catch(e) {}
+}
+
+async function toggleWishlist() {
+  var token = localStorage.getItem('access_token');
+  if (!token) { window.location.href = '/signin/'; return; }
+  try {
+    var res = await fetch(API+'/wishlist/', {method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({product_id:productId})});
+    var d = await res.json();
+    var btn = document.getElementById('wishlist-btn');
+    btn.innerHTML = d.wishlisted ? '♥' : '♡';
+    btn.classList.toggle('active', d.wishlisted);
+    showToast(d.wishlisted?'Added to wishlist!':'Removed','info');
+  } catch(e) {}
+}
+
+loadProduct();
+</script>
+{% endblock %}

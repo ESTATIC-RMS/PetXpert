@@ -120,31 +120,39 @@
                 <i data-lucide="layout-dashboard" class="w-5 h-5 group-hover:text-[var(--primary)]"></i>
                 <span class="font-semibold text-sm">Dashboard</span>
             </a>
-            <a href="/veterinarians/" id="nav-vets" class="flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-[var(--surface-container-low)] rounded-xl transition-all group">
+            <a href="/veterinarians/" id="nav-vets" class="pet-owner-only flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-[var(--surface-container-low)] rounded-xl transition-all group" style="display:none">
                 <i data-lucide="stethoscope" class="w-5 h-5 group-hover:text-[var(--primary)]"></i>
                 <span class="font-semibold text-sm">Vet Services</span>
             </a>
-            <a href="/my-pets/" id="nav-pets" class="flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-[var(--surface-container-low)] rounded-xl transition-all group">
+            <a href="/my-pets/" id="nav-pets" class="pet-only flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-[var(--surface-container-low)] rounded-xl transition-all group" style="display:none">
                 <i data-lucide="paw-print" class="w-5 h-5 group-hover:text-[var(--primary)]"></i>
                 <span class="font-semibold text-sm">My Pets</span>
             </a>
-            <a href="/ai-diagnosis/" id="nav-diagnosis" class="flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-[var(--surface-container-low)] rounded-xl transition-all group">
+            <a href="/ai-diagnosis/" id="nav-diagnosis" class="pet-owner-only flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-[var(--surface-container-low)] rounded-xl transition-all group" style="display:none">
                 <i data-lucide="microscope" class="w-5 h-5 group-hover:text-[var(--primary)]"></i>
                 <span class="font-semibold text-sm">AI Diagnosis</span>
             </a>
-            <a href="/appointments/" id="nav-appointments" class="flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-[var(--surface-container-low)] rounded-xl transition-all group">
+            <a href="/appointments/" id="nav-appointments" class="pet-owner-only flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-[var(--surface-container-low)] rounded-xl transition-all group" style="display:none">
                 <i data-lucide="calendar" class="w-5 h-5 group-hover:text-[var(--primary)]"></i>
                 <span class="font-semibold text-sm">Appointments</span>
             </a>
-            <a href="/prescriptions/" id="nav-prescriptions" class="flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-[var(--surface-container-low)] rounded-xl transition-all group">
+            <a href="/prescriptions/" id="nav-prescriptions" class="pet-owner-only flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-[var(--surface-container-low)] rounded-xl transition-all group" style="display:none">
                 <i data-lucide="pill" class="w-5 h-5 group-hover:text-[var(--primary)]"></i>
                 <span class="font-semibold text-sm">Prescriptions</span>
             </a>
-            <a href="/marketplace/" id="nav-marketplace" class="flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-[var(--surface-container-low)] rounded-xl transition-all group">
+            <a href="/marketplace/" id="nav-marketplace" class="not-vet flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-[var(--surface-container-low)] rounded-xl transition-all group" style="display:none">
                 <i data-lucide="shopping-bag" class="w-5 h-5 group-hover:text-[var(--primary)]"></i>
-                <span class="font-semibold text-sm">Accessories</span>
+                <span class="font-semibold text-sm">Marketplace</span>
             </a>
-            <a href="/community/" id="nav-community" class="flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-[var(--surface-container-low)] rounded-xl transition-all group">
+            <a href="/marketplace/orders/manage/" id="nav-orders" class="not-vet flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-[var(--surface-container-low)] rounded-xl transition-all group" style="display:none">
+                <i data-lucide="clipboard-list" class="w-5 h-5 group-hover:text-[var(--primary)]"></i>
+                <span class="font-semibold text-sm">Orders</span>
+            </a>
+            <a href="/marketplace/inventory/" id="nav-inventory" class="seller-only flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-[var(--surface-container-low)] rounded-xl transition-all group" style="display:none">
+                <i data-lucide="package" class="w-5 h-5 group-hover:text-[var(--primary)]"></i>
+                <span class="font-semibold text-sm">Inventory</span>
+            </a>
+            <a href="/community/" id="nav-community" class="pet-owner-only flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-[var(--surface-container-low)] rounded-xl transition-all group" style="display:none">
                 <i data-lucide="message-circle" class="w-5 h-5 group-hover:text-[var(--primary)]"></i>
                 <span class="font-semibold text-sm">Community Chat</span>
             </a>
@@ -173,6 +181,9 @@
             </div>
             
             <div class="flex items-center gap-6">
+                <a href="/marketplace/wishlist/" id="wishlistLink" class="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors relative hidden">
+                    <i data-lucide="heart" class="w-5 h-5"></i>
+                </a>
                 <a href="/marketplace/cart/" id="cartLink" class="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors relative hidden">
                     <i data-lucide="shopping-cart" class="w-5 h-5"></i>
                     <span id="cartBadge" class="absolute -top-1.5 -right-1.5 bg-[var(--primary)] text-white text-[9px] font-bold rounded-full w-5 h-5 flex items-center justify-center border-2 border-white shadow-sm hidden">0</span>
@@ -404,8 +415,22 @@
             document.getElementById('userName').innerText = capitalizeName(user.full_name || user.email);
             document.getElementById('userRole').innerText = user.role.replace('_', ' ');
             loadProfileImage();
-            const cartLink = document.getElementById('cartLink');
-            if (cartLink) cartLink.classList.remove('hidden');
+            if (user.role === 'PET_OWNER') {
+                const cartLink = document.getElementById('cartLink');
+                const wishlistLink = document.getElementById('wishlistLink');
+                if (cartLink) cartLink.classList.remove('hidden');
+                if (wishlistLink) wishlistLink.classList.remove('hidden');
+            }
+            if (user.role === 'SELLER') {
+                document.querySelectorAll('.seller-only').forEach(function(el) { el.style.display = 'flex'; });
+                document.querySelectorAll('.not-vet').forEach(function(el) { el.style.display = 'flex'; });
+            } else if (user.role === 'PET_OWNER') {
+                document.querySelectorAll('.pet-owner-only').forEach(function(el) { el.style.display = 'flex'; });
+                document.querySelectorAll('.not-vet').forEach(function(el) { el.style.display = 'flex'; });
+                document.querySelectorAll('.pet-only').forEach(function(el) { el.style.display = 'flex'; });
+            } else if (user.role === 'VETERINARIAN') {
+                document.querySelectorAll('.pet-owner-only').forEach(function(el) { el.style.display = 'flex'; });
+            }
             updateCartBadge();
         }
 
@@ -415,8 +440,8 @@
                 if (!res.ok) return;
                 const data = await res.json();
                 const badge = document.getElementById('cartBadge');
-                if (badge && data.item_count > 0) {
-                    badge.textContent = data.item_count;
+                if (badge && data.total_items > 0) {
+                    badge.textContent = data.total_items;
                     badge.classList.remove('hidden');
                 } else if (badge) {
                     badge.classList.add('hidden');
@@ -749,18 +774,22 @@
         }
 
         const currentPath = window.location.pathname;
-        const navMap = {
-            '/dashboard/': 'nav-dashboard',
-            '/veterinarians/': 'nav-vets',
-            '/my-pets/': 'nav-pets',
-            '/ai-diagnosis/': 'nav-diagnosis',
-            '/appointments/': 'nav-appointments',
-            '/prescriptions/': 'nav-prescriptions',
-            '/marketplace/': 'nav-marketplace',
-        };
-        let activeId = navMap[currentPath];
-        if (!activeId && currentPath.startsWith('/marketplace/') && !currentPath.includes('/seller/')) {
-            activeId = 'nav-marketplace';
+        const navMap = [
+            ['/marketplace/orders/', 'nav-orders'],
+            ['/marketplace/inventory/', 'nav-inventory'],
+            ['/marketplace/wishlist/', 'nav-wishlist'],
+            ['/marketplace/inventory/', 'nav-inventory'],
+            ['/marketplace/', 'nav-marketplace'],
+            ['/dashboard/', 'nav-dashboard'],
+            ['/veterinarians/', 'nav-vets'],
+            ['/my-pets/', 'nav-pets'],
+            ['/ai-diagnosis/', 'nav-diagnosis'],
+            ['/appointments/', 'nav-appointments'],
+            ['/prescriptions/', 'nav-prescriptions'],
+        ];
+        let activeId = null;
+        for (var i = 0; i < navMap.length; i++) {
+            if (currentPath.startsWith(navMap[i][0])) { activeId = navMap[i][1]; break; }
         }
         if (activeId) {
             const el = document.getElementById(activeId);
@@ -904,7 +933,7 @@
             } else if (type.startsWith('ORDER_')) {
                 window.location.href = '/marketplace/orders/';
             } else if (type.startsWith('SELLER_')) {
-                window.location.href = '/marketplace/seller/dashboard/';
+                window.location.href = '/dashboard/';
             } else if (type.startsWith('ADMIN_')) {
                 window.location.href = '/marketplace/admin/';
             } else if (type === 'REVIEW_RECEIVED') {

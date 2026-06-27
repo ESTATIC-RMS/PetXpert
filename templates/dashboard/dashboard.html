@@ -37,7 +37,11 @@
     .empty-state { padding:2.5rem 1rem; text-align:center; color:#9ca3af; }
     .profile-banner { background: linear-gradient(135deg, #1a56db 0%, #003fb1 100%); border-radius:1rem; padding:1.25rem 1.5rem; color:#fff; display:flex; align-items:center; gap:1rem; }
     .rating-star { color:#f59e0b; }
-    #petOwnerDash, #vetDash { display:none; }
+    #petOwnerDash, #vetDash, #sellerDash { display:none; }
+    .status-pill { display:inline-flex; align-items:center; padding:2px 10px; border-radius:9999px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; }
+    .status-PAID{background:#d1fae5;color:#065f46} .status-PENDING_PAYMENT{background:#e0e7ff;color:#3730a3}
+    .status-PROCESSING{background:#eff6ff;color:#2563eb} .status-SHIPPED{background:#dbeafe;color:#1e40af}
+    .status-DELIVERED{background:#ecfdf5;color:#059669} .status-CANCELLED{background:#fee2e2;color:#dc2626}
     .skeleton { background: linear-gradient(90deg, #e7e7f3 25%, #f3f3fe 50%, #e7e7f3 75%); background-size:200% 100%; animation:shimmer 1.5s infinite; border-radius:0.5rem; }
     @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
 </style>
@@ -230,6 +234,19 @@
             </div>
             <div id="vet-pending-list" class="divide-y divide-gray-50 max-h-64 overflow-y-auto"></div>
         </div>
+    </div>
+</div>
+
+<div id="sellerDash">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="stat-card"><div class="stat-icon bg-blue-50"><i data-lucide="banknote" class="w-6 h-6 text-blue-600"></i></div><div><p class="text-2xl font-bold text-gray-900 font-hanken" id="s-revenue">0</p><p class="text-xs text-gray-500 font-semibold">Total Revenue (PKR)</p></div></div>
+        <div class="stat-card"><div class="stat-icon bg-green-50"><i data-lucide="shopping-bag" class="w-6 h-6 text-green-600"></i></div><div><p class="text-2xl font-bold text-gray-900 font-hanken" id="s-products">0</p><p class="text-xs text-gray-500 font-semibold">Active Listings</p></div></div>
+        <div class="stat-card"><div class="stat-icon bg-orange-50"><i data-lucide="clock" class="w-6 h-6 text-orange-500"></i></div><div><p class="text-2xl font-bold text-gray-900 font-hanken" id="s-pending">0</p><p class="text-xs text-gray-500 font-semibold">Pending Orders</p></div></div>
+        <div class="stat-card"><div class="stat-icon bg-yellow-50"><i data-lucide="star" class="w-6 h-6 text-yellow-500"></i></div><div><p class="text-2xl font-bold text-gray-900 font-hanken" id="s-rating">0.0</p><p class="text-xs text-gray-500 font-semibold">Store Rating</p></div></div>
+    </div>
+    <div class="grid lg:grid-cols-3 gap-5">
+        <div class="section-card lg:col-span-2"><div class="section-header"><h3 class="font-bold text-gray-900 text-sm font-hanken">Recent Orders</h3><span class="text-xs text-gray-400 font-semibold" id="s-orders-label"></span></div><div id="s-orders-list" class="divide-y divide-gray-50 max-h-[500px] overflow-y-auto"></div></div>
+        <div class="section-card"><div class="section-header"><h3 class="font-bold text-gray-900 text-sm font-hanken">My Products</h3></div><div id="s-products-list" class="p-3 space-y-2 max-h-[500px] overflow-y-auto"></div></div>
     </div>
 </div>
 {% endblock %}
@@ -432,6 +449,8 @@ async function loadDashboard() {
             renderPetOwner(data);
         } else if (data.role === 'VETERINARIAN') {
             renderVet(data);
+        } else if (data.role === 'SELLER') {
+            renderSeller();
         }
     } catch (err) {
         document.getElementById('dashSkeleton').innerHTML = `
@@ -442,6 +461,51 @@ async function loadDashboard() {
             </div>`;
         lucide.createIcons();
     }
+}
+
+async function renderSeller() {
+    try {
+        var token = localStorage.getItem('access_token');
+        var h = {'Authorization': 'Bearer ' + token};
+        var [sRes, oRes, pRes] = await Promise.all([
+            fetch('/api/marketplace/seller/sales-summary/', {headers: h}),
+            fetch('/api/marketplace/seller/orders/', {headers: h}),
+            fetch('/api/marketplace/seller/products/', {headers: h}),
+        ]);
+        var summary = await sRes.json();
+        var orders = await oRes.json();
+        var products = await pRes.json();
+        document.getElementById('s-revenue').textContent = 'Rs. ' + summary.total_revenue.toLocaleString();
+        document.getElementById('s-products').textContent = summary.products_count;
+        document.getElementById('s-pending').textContent = summary.pending_orders;
+        var avgRating = products.length ? (products.reduce(function(s,p){return s+(p.rating||0);},0)/products.length).toFixed(1) : '0.0';
+        document.getElementById('s-rating').textContent = avgRating;
+        document.getElementById('s-orders-label').textContent = orders.length + ' orders';
+        var oList = document.getElementById('s-orders-list');
+        if (!orders.length) {
+            oList.innerHTML = '<div class="empty-state"><i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 text-gray-300"></i><p class="text-sm font-medium">No orders yet</p></div>';
+        } else {
+            oList.innerHTML = orders.slice(0,8).map(function(o){
+                var items = o.items.map(function(i){return i.product_name;}).join(', ');
+                return '<div class="appt-row"><div class="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0"><i data-lucide="package" class="w-5 h-5 text-gray-500"></i></div><div class="flex-1 min-w-0"><p class="font-bold text-gray-900 text-sm">'+o.buyer_name+'</p><p class="text-xs text-gray-500">'+items.substring(0,40)+'</p></div><div class="flex flex-col items-end gap-1"><span class="status-pill status-'+o.status+'">'+o.status.replace(/_/g,' ')+'</span><span class="text-xs text-gray-400 font-semibold">Rs. '+o.total.toLocaleString()+'</span></div></div>';
+            }).join('');
+        }
+        var pList = document.getElementById('s-products-list');
+        if (!products.length) {
+            pList.innerHTML = '<div class="empty-state"><i data-lucide="shopping-bag" class="w-8 h-8 mx-auto mb-2 text-gray-300"></i><p class="text-sm font-medium">No products yet</p></div>';
+        } else {
+            pList.innerHTML = products.slice(0,6).map(function(p){
+                var img = (p.images&&p.images[0])?p.images[0].url:(p.image||'');
+                if(!img) img = 'https://placehold.co/80/e2e1ed/737686?text=No+Img';
+                return '<div class="pet-card"><img src="'+img+'" class="pet-avatar" onerror="this.src=\'https://placehold.co/80/e2e1ed\'"><div class="flex-1 min-w-0"><p class="font-bold text-gray-900 text-sm line-clamp-1">'+p.name+'</p><p class="text-xs text-gray-500">Rs. '+p.price.toLocaleString()+' · Stock: '+p.stock+'</p></div></div>';
+            }).join('');
+        }
+        document.getElementById('sellerDash').style.display = 'block';
+    } catch(e) {
+        document.getElementById('sellerDash').style.display = 'block';
+        document.getElementById('sellerDash').innerHTML = '<div class="text-center py-16 text-gray-400"><i data-lucide="wifi-off" class="w-10 h-10 mx-auto mb-3"></i><p class="font-semibold">Could not load seller dashboard</p><p class="text-sm mt-1">'+e.message+'</p></div>';
+    }
+    lucide.createIcons();
 }
 
 loadDashboard();

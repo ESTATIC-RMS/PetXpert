@@ -1,0 +1,254 @@
+{% extends "layouts/base.html" %}
+{% block page_title %}Add New Product{% endblock %}
+{% block page_subtitle %}<button onclick="history.back()" class="inline-flex items-center gap-1 text-gray-400 hover:text-[var(--primary)] font-bold text-sm mr-2 transition-colors"><i data-lucide="arrow-left" class="w-4 h-4"></i> Back</button> Create a new listing for your store{% endblock %}
+
+{% block extra_head %}
+<style>
+  .form-card { background:#fff; border-radius:16px; border:1px solid #f3f4f6; box-shadow:0 1px 3px rgba(0,0,0,0.04); padding:1.5rem; margin-bottom:1.25rem; }
+  .form-card h3 { font-family:'Hanken Grotesk',sans-serif; font-weight:700; font-size:1rem; color:#111827; margin-bottom:1rem; }
+  .form-group { margin-bottom:1rem; }
+  .form-group label { display:block; font-size:0.8rem; font-weight:600; color:#374151; margin-bottom:0.35rem; }
+  .form-input { width:100%; padding:0.65rem 0.9rem; border:1.5px solid #e5e7eb; border-radius:10px; font-size:0.88rem; transition:all 0.2s; background:#fff; }
+  .form-input:focus { outline:none; border-color:var(--primary,#003fb1); box-shadow:0 0 0 3px rgba(0,63,177,0.06); }
+  textarea.form-input { resize:vertical; min-height:100px; }
+  .form-row { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+  @media(max-width:640px){ .form-row{grid-template-columns:1fr;} }
+
+  /* Quantity stepper */
+  .qty-stepper { display:inline-flex; align-items:center; border:1.5px solid #e5e7eb; border-radius:10px; overflow:hidden; }
+  .qty-stepper button { width:38px; height:38px; border:none; background:#f9fafb; font-size:1.1rem; font-weight:700; cursor:pointer; color:#374151; transition:background 0.15s; display:flex; align-items:center; justify-content:center; }
+  .qty-stepper button:hover { background:#f3f4f6; }
+  .qty-stepper input { width:60px; text-align:center; border:none; border-left:1.5px solid #e5e7eb; border-right:1.5px solid #e5e7eb; font-weight:700; font-size:0.9rem; padding:0; height:38px; }
+
+  /* Visibility radio */
+  .vis-option { display:flex; align-items:center; gap:0.75rem; padding:0.75rem 1rem; border:2px solid #e5e7eb; border-radius:12px; cursor:pointer; transition:all 0.2s; margin-bottom:0.5rem; }
+  .vis-option:hover { border-color:#d1d5db; }
+  .vis-option.active { border-color:var(--primary,#003fb1); background:#f0f4ff; }
+  .vis-radio { width:18px; height:18px; border-radius:50%; border:2px solid #d1d5db; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all 0.2s; }
+  .vis-option.active .vis-radio { border-color:var(--primary,#003fb1); }
+  .vis-option.active .vis-radio::after { content:''; width:10px; height:10px; border-radius:50%; background:var(--primary,#003fb1); }
+
+  /* Image upload */
+  .upload-zone { border:2px dashed #e5e7eb; border-radius:12px; padding:2rem; text-align:center; cursor:pointer; transition:all 0.2s; }
+  .upload-zone:hover { border-color:var(--primary,#003fb1); background:#fafaff; }
+  .upload-zone.dragover { border-color:var(--primary,#003fb1); background:#f0f4ff; }
+  .img-thumb { width:80px; height:80px; border-radius:10px; object-fit:cover; border:2px solid transparent; cursor:pointer; position:relative; flex-shrink:0; }
+  .img-thumb.primary { border-color:var(--primary,#003fb1); }
+  .img-thumb-wrapper { position:relative; display:inline-flex; }
+  .primary-badge { position:absolute; top:-6px; left:50%; transform:translateX(-50%); background:var(--primary,#003fb1); color:#fff; font-size:0.6rem; font-weight:700; padding:2px 6px; border-radius:4px; white-space:nowrap; z-index:1; }
+  .img-remove { position:absolute; top:-6px; right:-6px; width:20px; height:20px; border-radius:50%; background:#ef4444; color:#fff; border:none; cursor:pointer; font-size:0.65rem; display:flex; align-items:center; justify-content:center; }
+
+  .btn { padding:0.65rem 1.5rem; border-radius:10px; font-weight:700; font-size:0.85rem; cursor:pointer; transition:all 0.2s; display:inline-flex; align-items:center; gap:0.4rem; border:none; text-decoration:none; }
+  .btn-primary { background:var(--primary,#003fb1); color:#fff; } .btn-primary:hover { background:#1a56db; }
+  .btn-orange { background:#ea580c; color:#fff; } .btn-orange:hover { background:#c2410c; }
+  .btn-outline { background:#fff; color:#374151; border:1.5px solid #e5e7eb; } .btn-outline:hover { border-color:#d1d5db; }
+  .btn:disabled { opacity:0.5; cursor:not-allowed; }
+  .field-error { color:#dc2626; font-size:0.72rem; margin-top:0.25rem; display:none; }
+  .field-error.show { display:block; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+  <!-- Two-column: Main + Sidebar -->
+  <div class="grid lg:grid-cols-3 gap-6">
+    <!-- Left: Main content -->
+    <div class="lg:col-span-2 space-y-5">
+
+      <!-- Basic Information -->
+      <div class="form-card">
+        <h3>Basic Information</h3>
+        <div class="form-group">
+          <label>Product Name <span class="text-red-500">*</span></label>
+          <input class="form-input" id="prod-name" placeholder="e.g. Premium Orthopedic Dog Bed">
+          <p class="field-error" id="err-name">Product name is required</p>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Category <span class="text-red-500">*</span></label>
+            <select class="form-input" id="prod-category"><option value="">Select Category</option></select>
+            <p class="field-error" id="err-category">Please select a category</p>
+          </div>
+          <div class="form-group">
+            <label>Brand</label>
+            <input class="form-input" id="prod-brand" placeholder="e.g. BarkComfort">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Product Description</label>
+          <textarea class="form-input" id="prod-desc" placeholder="Describe the key features, materials, and benefits of your product..." rows="4"></textarea>
+        </div>
+      </div>
+
+      <!-- Pricing & Inventory -->
+      <div class="form-card">
+        <h3>Pricing & Inventory</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Base Price (PKR) <span class="text-red-500">*</span></label>
+            <input class="form-input" id="prod-price" type="number" step="0.01" min="0" placeholder="0.00">
+            <p class="field-error" id="err-price">Valid price is required</p>
+          </div>
+          <div class="form-group">
+            <label>Product SKU / ID Number</label>
+            <input class="form-input" id="prod-sku" placeholder="e.g. B&M-DOG-001">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Quantity in Stock</label>
+          <div class="qty-stepper">
+            <button type="button" onclick="changeQty(-1)">−</button>
+            <input type="number" id="prod-stock" value="1" min="0" readonly>
+            <button type="button" onclick="changeQty(1)">+</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Pet Type</label>
+          <input class="form-input" id="prod-pet-type" placeholder="e.g. Dog, Cat, Bird (comma-separated)">
+        </div>
+      </div>
+
+      <!-- Product Media -->
+      <div class="form-card">
+        <h3>Product Media</h3>
+        <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
+          <i data-lucide="image-plus" class="w-10 h-10 text-gray-300 mx-auto mb-2"></i>
+          <p class="text-sm font-bold text-gray-500">Upload</p>
+          <p class="text-xs text-gray-400 mt-1">PNG, JPG, JPEG or WEBP</p>
+        </div>
+        <input type="file" id="file-input" accept="image/png,image/jpeg,image/webp" multiple hidden onchange="handleFiles(this.files)">
+        <p class="field-error" id="err-image">At least one image is required</p>
+
+        <div class="flex flex-wrap gap-3 mt-3" id="image-previews"></div>
+        <p class="text-xs text-gray-400 mt-3">You can upload up to 8 photos. Use high-resolution PNG or JPG images for the best results. Recommended size is 1200×1200 pixels. Drag images to reorder.</p>
+      </div>
+    </div>
+
+    <!-- Right: Sidebar -->
+    <div class="space-y-5">
+      <!-- Visibility -->
+      <div class="form-card">
+        <h3>Visibility</h3>
+        <div class="vis-option active" id="vis-public" onclick="setVisibility('public')">
+          <div class="vis-radio"></div>
+          <div><p class="text-sm font-bold text-gray-900">Public</p><p class="text-xs text-gray-400">Visible to all customers</p></div>
+        </div>
+        <div class="vis-option" id="vis-draft" onclick="setVisibility('draft')">
+          <div class="vis-radio"></div>
+          <div><p class="text-sm font-bold text-gray-900">Draft</p><p class="text-xs text-gray-400">Only visible to you</p></div>
+        </div>
+        <input type="hidden" id="prod-visibility" value="public">
+      </div>
+
+      <!-- Publish -->
+      <div class="form-card">
+        <h3>Ready to Publish?</h3>
+        <p class="text-xs text-gray-400 mb-4">Your product will be listed immediately in the marketplace.</p>
+        <button class="btn btn-orange w-full justify-center text-base" id="publish-btn" onclick="publishProduct()">
+          <i data-lucide="rocket" class="w-5 h-5"></i> Publish Product
+        </button>
+        <a href="/marketplace/inventory/" class="btn btn-outline w-full justify-center mt-3">Cancel</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const API = '/api/marketplace';
+let uploadedFiles = [];
+let primaryImageIdx = 0;
+
+// Load categories
+async function loadCats() {
+  try { var cats = await (await fetch(API+'/categories/')).json(); var s = document.getElementById('prod-category'); cats.forEach(function(c){ s.innerHTML += '<option value="'+c.slug+'">'+c.name+'</option>'; }); } catch(e) {}
+}
+
+function setVisibility(type) {
+  document.getElementById('prod-visibility').value = type;
+  document.getElementById('vis-public').classList.toggle('active', type==='public');
+  document.getElementById('vis-draft').classList.toggle('active', type==='draft');
+}
+
+function changeQty(delta) {
+  var inp = document.getElementById('prod-stock');
+  var v = Math.max(0, parseInt(inp.value||0) + delta);
+  inp.value = v;
+}
+
+function handleFiles(files) {
+  for (var i=0; i<files.length && uploadedFiles.length < 8; i++) {
+    uploadedFiles.push(files[i]);
+  }
+  renderPreviews();
+  document.getElementById('file-input').value = '';
+}
+
+function renderPreviews() {
+  var container = document.getElementById('image-previews');
+  container.innerHTML = '';
+  uploadedFiles.forEach(function(f, idx) {
+    var url = URL.createObjectURL(f);
+    var wrapper = document.createElement('div');
+    wrapper.className = 'img-thumb-wrapper';
+    wrapper.innerHTML =
+      '<img src="'+url+'" class="img-thumb'+(idx===primaryImageIdx?' primary':'')+'" onclick="setPrimary('+idx+')">' +
+      (idx===primaryImageIdx?'<span class="primary-badge">PRIMARY</span>':'') +
+      '<button class="img-remove" onclick="removeImage('+idx+')">×</button>';
+    container.appendChild(wrapper);
+  });
+  document.getElementById('err-image').classList.toggle('show', uploadedFiles.length === 0);
+}
+
+function setPrimary(idx) { primaryImageIdx = idx; renderPreviews(); }
+function removeImage(idx) { uploadedFiles.splice(idx,1); if (primaryImageIdx >= uploadedFiles.length) primaryImageIdx = Math.max(0, uploadedFiles.length-1); renderPreviews(); }
+
+// Drag & drop
+var zone = document.getElementById('upload-zone');
+zone.addEventListener('dragover', function(e){ e.preventDefault(); zone.classList.add('dragover'); });
+zone.addEventListener('dragleave', function(){ zone.classList.remove('dragover'); });
+zone.addEventListener('drop', function(e){ e.preventDefault(); zone.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
+
+function validate() {
+  var valid = true;
+  var name = document.getElementById('prod-name').value.trim();
+  var cat = document.getElementById('prod-category').value;
+  var price = parseFloat(document.getElementById('prod-price').value);
+  document.getElementById('err-name').classList.toggle('show', !name); if (!name) valid = false;
+  document.getElementById('err-category').classList.toggle('show', !cat); if (!cat) valid = false;
+  document.getElementById('err-price').classList.toggle('show', !price || price <= 0); if (!price || price<=0) valid = false;
+  document.getElementById('err-image').classList.toggle('show', uploadedFiles.length === 0); if (!uploadedFiles.length) valid = false;
+  return valid;
+}
+
+async function publishProduct() {
+  if (!validate()) return;
+  var btn = document.getElementById('publish-btn'); btn.disabled = true;
+  btn.innerHTML = '<i data-lucide="loader" class="w-5 h-5 animate-spin"></i> Publishing...';
+
+  var fd = new FormData();
+  fd.append('name', document.getElementById('prod-name').value.trim());
+  fd.append('category', document.getElementById('prod-category').value);
+  fd.append('description', document.getElementById('prod-desc').value.trim());
+  fd.append('price', document.getElementById('prod-price').value);
+  fd.append('stock', document.getElementById('prod-stock').value);
+  fd.append('pet_type', document.getElementById('prod-pet-type').value.trim());
+  fd.append('is_active', document.getElementById('prod-visibility').value === 'public' ? 'true' : 'false');
+  // Slug from name
+  fd.append('slug', document.getElementById('prod-name').value.trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''));
+  // Primary image first
+  if (uploadedFiles[primaryImageIdx]) fd.append('image', uploadedFiles[primaryImageIdx]);
+  uploadedFiles.forEach(function(f){ fd.append('images', f); });
+
+  try {
+    var res = await fetch(API+'/seller/products/', {method:'POST', headers:{'Authorization':'Bearer '+localStorage.getItem('access_token')}, body:fd});
+    if (res.ok) { showToast('Product published!','success'); setTimeout(function(){ window.location.href='/marketplace/inventory/'; }, 800); }
+    else { var d = await res.json(); showToast(d.name||d.error||'Failed','error'); btn.disabled=false; btn.innerHTML='<i data-lucide="rocket" class="w-5 h-5"></i> Publish Product'; lucide.createIcons(); }
+  } catch(e) { btn.disabled=false; btn.innerHTML='<i data-lucide="rocket" class="w-5 h-5"></i> Publish Product'; lucide.createIcons(); }
+}
+
+loadCats();
+lucide.createIcons();
+</script>
+{% endblock %}

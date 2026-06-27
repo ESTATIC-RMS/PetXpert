@@ -99,6 +99,7 @@
                         <button type="button" onclick="setRole('PET_OWNER')" id="role_owner" class="role-btn py-3 rounded-xl border-2 border-primary bg-blue-50 text-primary font-bold transition-all">Pet Owner</button>
                         <button type="button" onclick="setRole('VETERINARIAN')" id="role_vet" class="role-btn py-3 rounded-xl border-2 border-gray-100 text-gray-500 font-bold hover:border-gray-200 transition-all">Veterinarian</button>
                     </div>
+                    <button type="button" onclick="setRole('SELLER')" id="role_seller" class="role-btn w-full mt-3 py-3 rounded-xl border-2 border-gray-100 text-gray-500 font-bold hover:border-gray-200 transition-all">Seller</button>
                     <input type="hidden" id="role" value="PET_OWNER">
                 </div>
 
@@ -185,14 +186,14 @@
             document.getElementById('role').value = role;
             const ownerBtn = document.getElementById('role_owner');
             const vetBtn = document.getElementById('role_vet');
-            
-            if (role === 'PET_OWNER') {
-                ownerBtn.className = 'role-btn py-3 rounded-xl border-2 border-primary bg-blue-50 text-primary font-bold transition-all';
-                vetBtn.className = 'role-btn py-3 rounded-xl border-2 border-gray-100 text-gray-500 font-bold hover:border-gray-200 transition-all';
-            } else {
-                vetBtn.className = 'role-btn py-3 rounded-xl border-2 border-primary bg-blue-50 text-primary font-bold transition-all';
-                ownerBtn.className = 'role-btn py-3 rounded-xl border-2 border-gray-100 text-gray-500 font-bold hover:border-gray-200 transition-all';
-            }
+            const sellerBtn = document.getElementById('role_seller');
+            const active = 'role-btn py-3 rounded-xl border-2 border-primary bg-blue-50 text-primary font-bold transition-all';
+            const inactive = 'role-btn py-3 rounded-xl border-2 border-gray-100 text-gray-500 font-bold hover:border-gray-200 transition-all';
+            const sellerActive = 'role-btn w-full mt-3 py-3 rounded-xl border-2 border-primary bg-blue-50 text-primary font-bold transition-all';
+            const sellerInactive = 'role-btn w-full mt-3 py-3 rounded-xl border-2 border-gray-100 text-gray-500 font-bold hover:border-gray-200 transition-all';
+            ownerBtn.className = role === 'PET_OWNER' ? active : inactive;
+            vetBtn.className = role === 'VETERINARIAN' ? active : inactive;
+            sellerBtn.className = role === 'SELLER' ? sellerActive : sellerInactive;
         }
 
         document.getElementById('signupForm').addEventListener('submit', async (e) => {

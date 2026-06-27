@@ -1,0 +1,315 @@
+{% extends "layouts/base.html" %}
+{% block page_title %}Order Management{% endblock %}
+{% block page_subtitle %}<span id="subtitle-text">View and manage all orders in one place.</span>{% endblock %}
+
+{% block extra_head %}
+<style>
+  :root { --card-r: 14px; }
+  .stat-card-o { background:#fff; border-radius:var(--card-r); padding:1.25rem 1.4rem; border:1px solid #f3f4f6; box-shadow:0 1px 3px rgba(0,0,0,0.04); display:flex; align-items:flex-start; gap:1rem; transition:all 0.2s; }
+  .stat-card-o:hover { box-shadow:0 8px 24px rgba(0,63,177,0.06); transform:translateY(-2px); }
+  .stat-icon-o { width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .stat-value-o { font-family:'Hanken Grotesk',sans-serif; font-size:1.5rem; font-weight:700; color:#111827; line-height:1.2; }
+  .stat-label-o { font-size:0.78rem; color:#6b7280; font-weight:500; }
+  .stat-sub-o { font-size:0.7rem; margin-top:2px; }
+  .section-card { background:#fff; border-radius:var(--card-r); border:1px solid #f3f4f6; box-shadow:0 1px 3px rgba(0,0,0,0.04); overflow:hidden; }
+  .section-header { padding:1rem 1.25rem; border-bottom:1px solid #f3f4f6; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.75rem; }
+  .section-header h3 { font-family:'Hanken Grotesk',sans-serif; font-weight:700; font-size:0.95rem; color:#111827; }
+  .tab-pill { padding:0.5rem 1.1rem; border-radius:9999px; font-size:0.78rem; font-weight:600; cursor:pointer; transition:all 0.2s; white-space:nowrap; border:1.5px solid #e5e7eb; background:#fff; color:#6b7280; }
+  .tab-pill:hover { border-color:var(--primary,#003fb1); color:var(--primary,#003fb1); }
+  .tab-pill.active { background:var(--primary,#003fb1); color:#fff; border-color:var(--primary,#003fb1); }
+  .tab-count { font-size:0.68rem; opacity:0.7; margin-left:2px; }
+  .order-table { width:100%; border-collapse:collapse; font-size:0.82rem; }
+  .order-table th { text-align:left; padding:0.7rem 1rem; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#9ca3af; background:#fafafa; border-bottom:1px solid #f3f4f6; position:sticky; top:0; cursor:pointer; user-select:none; }
+  .order-table th:hover { color:#374151; }
+  .order-table td { padding:0.7rem 1rem; border-bottom:1px solid #f9fafb; color:#374151; vertical-align:middle; }
+  .order-table tr:hover td { background:#fafaff; }
+  .order-id { font-family:monospace; font-size:0.75rem; font-weight:700; color:var(--primary,#003fb1); }
+  .cust-cell { display:flex; align-items:center; gap:0.6rem; }
+  .cust-avatar { width:34px; height:34px; border-radius:50%; background:var(--primary,#003fb1); color:#fff; display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700; flex-shrink:0; }
+  .status-pill { display:inline-flex; padding:3px 10px; border-radius:9999px; font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; }
+  .status-PAID{background:#d1fae5;color:#065f46} .status-PENDING_PAYMENT{background:#e0e7ff;color:#3730a3}
+  .status-PROCESSING{background:#eff6ff;color:#2563eb} .status-SHIPPED{background:#dbeafe;color:#1e40af}
+  .status-DELIVERED{background:#ecfdf5;color:#059669} .status-CANCELLED{background:#fee2e2;color:#dc2626}
+  .btn-sm { padding:0.45rem 0.85rem; border-radius:8px; font-size:0.75rem; font-weight:700; cursor:pointer; transition:all 0.15s; display:inline-flex; align-items:center; gap:0.3rem; border:none; text-decoration:none; }
+  .btn-outline-sm { background:#fff; color:#374151; border:1.5px solid #e5e7eb; } .btn-outline-sm:hover { border-color:var(--primary,#003fb1); color:var(--primary,#003fb1); }
+  .btn-cancel { background:#fef2f2; color:#dc2626; } .btn-cancel:hover { background:#fee2e2; }
+  .btn-review { background:#fef3c7; color:#92400e; } .btn-review:hover { background:#fef08a; }
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(2px); z-index:50; display:flex; align-items:center; justify-content:center; }
+  .modal-card { background:#fff; border-radius:16px; width:100%; max-width:440px; margin:1rem; padding:1.5rem; box-shadow:0 20px 60px rgba(0,0,0,0.15); }
+  .star-btn { font-size:1.8rem; background:none; border:none; cursor:pointer; padding:0 2px; transition:transform 0.1s; }
+  .star-btn:hover { transform:scale(1.2); }
+  .search-input-o { padding:0.5rem 1rem 0.5rem 2.3rem; border:1.5px solid #e5e7eb; border-radius:10px; font-size:0.8rem; width:240px; transition:all 0.2s; }
+  .search-input-o:focus { outline:none; border-color:var(--primary,#003fb1); box-shadow:0 0 0 3px rgba(0,63,177,0.06); }
+  .sort-arrow { font-size:0.6rem; margin-left:2px; opacity:0.4; }
+  #not-seller, #orders-dash { display:none; }
+  .skeleton { background:linear-gradient(90deg,#f3f4f6 25%,#e5e7eb 50%,#f3f4f6 75%); background-size:200% 100%; animation:shimmer 1.5s infinite; border-radius:8px; }
+  @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+  .page-btn { width:34px; height:34px; border-radius:8px; border:1.5px solid #e5e7eb; background:#fff; font-weight:700; font-size:0.8rem; cursor:pointer; transition:all 0.15s; display:inline-flex; align-items:center; justify-content:center; }
+  .page-btn:hover { border-color:var(--primary,#003fb1); color:var(--primary,#003fb1); }
+  .page-btn.active { background:var(--primary,#003fb1); color:#fff; border-color:var(--primary,#003fb1); }
+  .page-btn:disabled { opacity:0.4; cursor:not-allowed; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="dashSkeleton">
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="skeleton h-24 rounded-2xl"></div><div class="skeleton h-24 rounded-2xl"></div>
+    <div class="skeleton h-24 rounded-2xl"></div><div class="skeleton h-24 rounded-2xl"></div>
+  </div>
+  <div class="skeleton h-96 rounded-2xl"></div>
+</div>
+
+<div id="not-seller" class="text-center py-20">
+  <i data-lucide="store" class="w-16 h-16 mx-auto mb-4 text-gray-300"></i>
+  <h2 class="text-xl font-bold text-gray-500" style="font-family:'Hanken Grotesk',sans-serif">Seller Account Required</h2>
+  <p class="text-gray-400 mt-1 mb-5">Sign up as a seller to access order management.</p>
+  <a href="/seller/signup/" class="btn-sm" style="background:var(--primary,#003fb1);color:#fff"><i data-lucide="store" class="w-4 h-4"></i> Become a Seller</a>
+</div>
+
+<div id="orders-dash">
+  <div id="review-banner" class="hidden bg-yellow-50 border border-yellow-200 rounded-2xl p-4 mb-5 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 bg-yellow-100 rounded-xl flex items-center justify-center"><i data-lucide="star" class="w-5 h-5 text-yellow-600"></i></div>
+      <div><p class="font-bold text-sm text-yellow-800">Rate your recent purchases</p><p class="text-xs text-yellow-600">Share your experience to help other pet owners</p></div>
+    </div>
+    <button onclick="document.getElementById('review-banner').classList.add('hidden')" class="text-yellow-500 hover:text-yellow-700"><i data-lucide="x" class="w-4 h-4"></i></button>
+  </div>
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="stat-card-o"><div class="stat-icon-o bg-blue-50"><i data-lucide="banknote" class="w-5 h-5 text-blue-600"></i></div><div><p class="stat-label-o">Today's Revenue</p><p class="stat-value-o" id="s-revenue">Rs. 0</p><p class="stat-sub-o text-green-600" id="s-revenue-sub">--</p></div></div>
+    <div class="stat-card-o"><div class="stat-icon-o bg-red-50"><i data-lucide="x-circle" class="w-5 h-5 text-red-500"></i></div><div><p class="stat-label-o">Cancelled Orders</p><p class="stat-value-o" id="s-pending">0</p><p class="stat-sub-o text-gray-400" id="s-pending-sub">--</p></div></div>
+    <div class="stat-card-o"><div class="stat-icon-o bg-green-50"><i data-lucide="trending-up" class="w-5 h-5 text-green-600"></i></div><div><p class="stat-label-o">Avg Order Value</p><p class="stat-value-o" id="s-avg">Rs. 0</p><p class="stat-sub-o text-gray-400">Based on last 30 days</p></div></div>
+    <div class="stat-card-o"><div class="stat-icon-o bg-yellow-50"><i data-lucide="star" class="w-5 h-5 text-yellow-500"></i></div><div><p class="stat-label-o">Store Rating</p><p class="stat-value-o" id="s-rating">0.0 ★</p><p class="stat-sub-o text-gray-400" id="s-rating-sub">--</p></div></div>
+  </div>
+
+  <div class="flex flex-wrap gap-2 mb-5" id="status-tabs">
+    <button class="tab-pill active" onclick="filterByStatus('')">All Orders</button>
+    <button class="tab-pill" onclick="filterByStatus('PROCESSING')">Processing <span class="tab-count" id="count-ship">0</span></button>
+    <button class="tab-pill" onclick="filterByStatus('SHIPPED')">Shipped <span class="tab-count" id="count-pending">0</span></button>
+    <button class="tab-pill" onclick="filterByStatus('DELIVERED')">Delivered <span class="tab-count" id="count-done">0</span></button>
+    <button class="tab-pill" onclick="filterByStatus('CANCELLED')">Cancelled <span class="tab-count" id="count-cancelled">0</span></button>
+  </div>
+
+  <div class="section-card">
+    <div class="section-header">
+      <h3>Recent Orders</h3>
+      <div class="flex items-center gap-3">
+        <div class="relative"><i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i><input class="search-input-o" id="order-search" placeholder="Search orders or customer..." oninput="renderOrders()"></div>
+        <button class="btn-sm btn-outline-sm" onclick="exportOrders()"><i data-lucide="download" class="w-3.5 h-3.5"></i> Export</button>
+      </div>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="order-table">
+        <thead><tr>
+          <th onclick="sortBy('id')">Order ID <span class="sort-arrow">↕</span></th>
+          <th onclick="sortBy('created_at')">Date <span class="sort-arrow">↕</span></th>
+          <th>Customer</th>
+          <th>Product(s)</th>
+          <th onclick="sortBy('total')">Total <span class="sort-arrow">↕</span></th>
+          <th>Status</th>
+          <th class="text-right">Actions</th>
+        </tr></thead>
+        <tbody id="orders-tbody"><tr><td colspan="7" class="text-center py-12 text-gray-400">Loading...</td></tr></tbody>
+      </table>
+    </div>
+    <div class="flex items-center justify-between p-4 border-t border-gray-100 flex-wrap gap-3">
+      <span class="text-xs text-gray-400" id="pagination-info">Showing 0 orders</span>
+      <div class="flex gap-1" id="pagination-btns"></div>
+    </div>
+  </div>
+</div>
+
+<div id="review-modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeReviewModal()">
+  <div class="modal-card">
+    <h3 class="text-lg font-bold mb-3" style="font-family:'Hanken Grotesk',sans-serif">Rate Your Order</h3>
+    <p class="text-sm text-gray-500 mb-3" id="review-order-label"></p>
+    <div class="flex gap-1 mb-4" id="review-stars"></div>
+    <textarea id="review-comment" rows="3" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm mb-4" placeholder="Write your review..."></textarea>
+    <div class="flex gap-2 justify-end">
+      <button onclick="closeReviewModal()" class="px-4 py-2 bg-gray-100 rounded-xl font-bold text-sm">Cancel</button>
+      <button onclick="submitReview()" class="px-4 py-2 bg-[var(--primary)] text-white rounded-xl font-bold text-sm">Submit Review</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const API = '/api/marketplace';
+let allOrders = [], filteredOrders = [], activeFilter = '', sortField = '', sortDir = 1, currentPage = 1, pageSize = 8;
+let userRole = '';
+
+function esc(s) { if(!s) return ''; return s.replace(/['\\]/g, function(m){ return '\\'+m; }); }
+function getInitials(name) { return (name||'?').split(' ').map(function(w){return w[0];}).join('').toUpperCase().substring(0,2); }
+function formatDate(iso) { var d=new Date(iso); return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})+'<br><span class="text-xs text-gray-400">'+d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true})+'</span>'; }
+
+async function loadOrders() {
+  var user; try { user = JSON.parse(localStorage.getItem('user')||'{}'); } catch(e) { user={}; }
+  userRole = user.role || '';
+  if (!userRole) { document.getElementById('dashSkeleton').style.display='none'; document.getElementById('not-seller').style.display='block'; lucide.createIcons(); return; }
+  try {
+    var token = localStorage.getItem('access_token'), h = {'Authorization':'Bearer '+token};
+    var isSeller = userRole === 'SELLER';
+    var oRes;
+    if (isSeller) {
+      var [sr, ss, sp] = await Promise.all([
+        fetch(API+'/seller/orders/', {headers:h}), fetch(API+'/seller/sales-summary/', {headers:h}), fetch(API+'/seller/products/', {headers:h}),
+      ]);
+      oRes = sr; var summary = await ss.json(); var products = await sp.json();
+    } else { oRes = await fetch(API+'/orders/', {headers:h}); }
+    allOrders = await oRes.json();
+    document.getElementById('dashSkeleton').style.display='none';
+    document.getElementById('orders-dash').style.display='block';
+    document.getElementById('subtitle-text').textContent = isSeller ? 'View and manage all customer orders in one place.' : 'Track your orders and purchases.';
+    if (isSeller) {
+      var today = new Date().toDateString();
+      var todayRevenue = allOrders.filter(function(o){ return new Date(o.created_at).toDateString()===today && ['PAID','PROCESSING','SHIPPED','DELIVERED'].includes(o.status); }).reduce(function(s,o){return s+parseFloat(o.total);},0);
+      var pending = allOrders.filter(function(o){ return o.status==='PENDING_PAYMENT'; }).length;
+      var avgVal = allOrders.length ? (allOrders.reduce(function(s,o){return s+parseFloat(o.total);},0)/allOrders.length) : 0;
+      var avgRating = products.length ? (products.reduce(function(s,p){return s+(p.rating||0);},0)/products.length).toFixed(1) : '0.0';
+      document.getElementById('s-revenue').textContent = 'Rs. ' + todayRevenue.toLocaleString();
+      document.getElementById('s-revenue-sub').textContent = allOrders.filter(function(o){return ['PAID','PROCESSING','SHIPPED','DELIVERED'].includes(o.status);}).length + ' total';
+      var cancelled = allOrders.filter(function(o){ return o.status==='CANCELLED'; }).length;
+      document.getElementById('s-pending').textContent = cancelled; document.getElementById('s-pending-sub').textContent = 'Cancelled or refunded';
+      document.getElementById('s-avg').textContent = 'Rs. ' + Math.round(avgVal).toLocaleString();
+      document.getElementById('s-rating').innerHTML = avgRating + ' ★★★★★'.substring(0, Math.round(parseFloat(avgRating))+2);
+      document.getElementById('s-rating-sub').textContent = products.length + ' products';
+      document.getElementById('count-ship').textContent = '('+allOrders.filter(function(o){return o.status==='PROCESSING';}).length+')';
+      document.getElementById('count-pending').textContent = '('+allOrders.filter(function(o){return o.status==='SHIPPED';}).length+')';
+      document.getElementById('count-done').textContent = '('+allOrders.filter(function(o){return o.status==='DELIVERED';}).length+')';
+      document.getElementById('count-cancelled').textContent = '('+allOrders.filter(function(o){return o.status==='CANCELLED';}).length+')';
+    } else {
+      var totalSpent = allOrders.filter(function(o){return o.status!=='CANCELLED';}).reduce(function(s,o){return s+parseFloat(o.total);},0);
+      var completed = allOrders.filter(function(o){return ['PAID','SHIPPED','DELIVERED'].includes(o.status);}).length;
+      var pending2 = allOrders.filter(function(o){return o.status==='PENDING_PAYMENT';}).length;
+      document.getElementById('s-revenue').textContent = 'Rs. ' + totalSpent.toLocaleString();
+      document.getElementById('s-revenue-sub').textContent = allOrders.filter(function(o){return o.status!=='CANCELLED';}).length + ' orders';
+      document.getElementById('s-revenue').previousElementSibling.textContent = 'Total Spent';
+      var cancelled = allOrders.filter(function(o){ return o.status==='CANCELLED'; }).length;
+      document.getElementById('s-pending').textContent = cancelled; document.getElementById('s-pending-sub').textContent = 'Cancelled or refunded';
+      document.getElementById('s-avg').textContent = completed; document.getElementById('s-avg').previousElementSibling.textContent = 'Completed';
+      document.getElementById('s-rating').textContent = allOrders.length; document.getElementById('s-rating').previousElementSibling.textContent = 'Total Orders';
+      document.getElementById('status-tabs').innerHTML = '<button class="tab-pill active" onclick="filterByStatus(\'\')">All Orders</button><button class="tab-pill" onclick="filterByStatus(\'PROCESSING\')">Processing</button><button class="tab-pill" onclick="filterByStatus(\'SHIPPED\')">Shipped</button><button class="tab-pill" onclick="filterByStatus(\'DELIVERED\')">Delivered</button><button class="tab-pill" onclick="filterByStatus(\'CANCELLED\')">Cancelled</button>';
+      var deliveredCount = allOrders.filter(function(o){ return o.status==='DELIVERED'; }).length;
+      if (deliveredCount > 0) document.getElementById('review-banner').classList.remove('hidden');
+    }
+    renderOrders(); lucide.createIcons();
+  } catch(e) { console.error(e); }
+}
+
+function filterByStatus(statuses) {
+  activeFilter = statuses; currentPage = 1;
+  document.querySelectorAll('#status-tabs .tab-pill').forEach(function(b,i){
+    var match = i===0 ? !statuses : statuses.split(',').some(function(s){ return b.textContent.trim().toLowerCase().startsWith(s.toLowerCase()); });
+    b.classList.toggle('active', match);
+  });
+  renderOrders();
+}
+function sortBy(field) { if (sortField === field) sortDir *= -1; else { sortField = field; sortDir = 1; } renderOrders(); }
+
+function renderOrders() {
+  var orders = allOrders;
+  if (activeFilter) { var st = activeFilter.split(','); orders = orders.filter(function(o){ return st.includes(o.status); }); }
+  var s = document.getElementById('order-search').value.toLowerCase();
+  if (s) orders = orders.filter(function(o){ return o.buyer_name.toLowerCase().includes(s) || o.id.toLowerCase().includes(s) || o.items.some(function(i){return i.product_name.toLowerCase().includes(s);}); });
+  if (sortField) {
+    orders.sort(function(a,b){
+      var va = sortField==='total'?parseFloat(a.total):(sortField==='id'?a.id:new Date(a.created_at).getTime());
+      var vb = sortField==='total'?parseFloat(b.total):(sortField==='id'?b.id:new Date(b.created_at).getTime());
+      return (va>vb?1:va<vb?-1:0)*sortDir;
+    });
+  }
+  filteredOrders = orders;
+  var totalPages = Math.ceil(orders.length/pageSize) || 1;
+  if (currentPage > totalPages) currentPage = totalPages;
+  var page = orders.slice((currentPage-1)*pageSize, currentPage*pageSize);
+  var start = orders.length? (currentPage-1)*pageSize+1 : 0;
+  var end = Math.min(currentPage*pageSize, orders.length);
+  document.getElementById('pagination-info').textContent = 'Showing '+start+' to '+end+' of '+orders.length+' orders';
+
+  var tbody = document.getElementById('orders-tbody');
+  if (!page.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-12 text-gray-400"><i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2 text-gray-300"></i><p class="font-semibold">No orders found</p>'+(userRole!=='SELLER'?'<p class="text-sm mt-1">Orders you place will appear here. <a href="/marketplace/" class="text-[var(--primary)] font-bold hover:underline">Browse products</a></p>':'')+'</td></tr>';
+  } else {
+    var isSeller = userRole === 'SELLER';
+    tbody.innerHTML = page.map(function(o){
+      var customer = esc(o.buyer_name || (o.items && o.items.length ? o.items[0].product_name : 'N/A'));
+      var items = (o.items||[]).map(function(i){return esc(i.product_name);}).join('<br><span class="text-xs text-gray-400">');
+      var nextLabel = {PAID:'Process',PROCESSING:'Ship',SHIPPED:'Deliver'}[o.status]||'View';
+      var rowId = 'row-'+o.id.slice(0,8);
+      var canCancel = !isSeller && (o.status === 'PROCESSING' || o.status === 'PENDING_PAYMENT');
+      var actionBtn = isSeller
+        ? '<button onclick="updateOrder(\''+o.id+'\',\''+o.status+'\')" class="btn-sm btn-outline-sm">'+nextLabel+'</button>'
+        : (canCancel ? '<button onclick="cancelOrder(\''+o.id+'\')" class="btn-sm btn-cancel">Cancel Order</button>' : (o.status==='DELIVERED' ? '<button onclick="openReviewModal(\''+o.id+'\')" class="btn-sm btn-review">⭐ Review</button>' : '<span class="text-xs text-gray-400">'+o.status.replace(/_/g,' ')+'</span>'));
+      var rowHtml = '<tr'+(isSeller?' class="order-row-clickable" onclick="toggleDetail(\''+rowId+'\')" style="cursor:pointer"':'')+'><td class="order-id">#ORD-'+o.id.slice(0,5).toUpperCase()+'</td><td class="text-xs">'+formatDate(o.created_at)+'</td><td><div class="cust-cell"><div class="cust-avatar">'+getInitials(customer)+'</div><span class="font-medium text-sm">'+customer+'</span></div></td><td class="text-sm">'+items+'</td><td class="font-bold">Rs. '+o.total.toLocaleString()+'</td><td><span class="status-pill status-'+o.status+'">'+o.status.replace(/_/g,' ')+'</span></td><td class="text-right" onclick="event.stopPropagation()">'+actionBtn+'</td></tr>';
+      if (isSeller) rowHtml += '<tr id="'+rowId+'" class="hidden"><td colspan="7" class="bg-gray-50 p-4"><div class="grid grid-cols-3 gap-4 text-sm"><div><span class="text-xs text-gray-400">Customer</span><p class="font-bold">'+customer+'</p></div><div><span class="text-xs text-gray-400">Address</span><p>'+ (o.shipping_address||'N/A') +'</p></div><div><span class="text-xs text-gray-400">Phone</span><p>'+ (o.contact_phone||'N/A') +'</p></div><div><span class="text-xs text-gray-400">Items</span><p>'+o.items.map(function(i){return i.product_name+' x'+i.quantity;}).join(', ')+'</p></div><div><span class="text-xs text-gray-400">Total</span><p class="font-bold">Rs. '+o.total.toLocaleString()+'</p></div><div><span class="text-xs text-gray-400">Order ID</span><p class="font-mono text-xs">'+o.id+'</p></div></div></td></tr>';
+      return rowHtml;
+    }).join('');
+  }
+  var btns = document.getElementById('pagination-btns');
+  var h = '<button class="page-btn" onclick="currentPage=1;renderOrders()" '+(currentPage===1?'disabled':'')+'><i data-lucide="chevrons-left" class="w-4 h-4"></i></button>';
+  h += '<button class="page-btn" onclick="currentPage=Math.max(1,currentPage-1);renderOrders()" '+(currentPage===1?'disabled':'')+'><i data-lucide="chevron-left" class="w-4 h-4"></i></button>';
+  for (var i=1; i<=totalPages; i++) h += '<button class="page-btn'+(i===currentPage?' active':'')+'" onclick="currentPage='+i+';renderOrders()">'+i+'</button>';
+  h += '<button class="page-btn" onclick="currentPage=Math.min(totalPages,currentPage+1);renderOrders()" '+(currentPage>=totalPages?'disabled':'')+'><i data-lucide="chevron-right" class="w-4 h-4"></i></button>';
+  h += '<button class="page-btn" onclick="currentPage=totalPages;renderOrders()" '+(currentPage>=totalPages?'disabled':'')+'><i data-lucide="chevrons-right" class="w-4 h-4"></i></button>';
+  btns.innerHTML = h; lucide.createIcons();
+}
+
+function toggleDetail(rowId) { var row = document.getElementById(rowId); if (row) row.classList.toggle('hidden'); }
+
+async function cancelOrder(id) {
+  if (!confirm('Cancel this order?')) return;
+  try { await fetch(API+'/seller/orders/'+id+'/',{method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+localStorage.getItem('access_token')},body:JSON.stringify({status:'CANCELLED'})}); loadOrders(); showToast('Order cancelled','info'); } catch(e) {}
+}
+
+async function updateOrder(id, status) {
+  if (userRole !== 'SELLER') return;
+  var next, msg;
+  if (status === 'PAID') { next = 'PROCESSING'; msg = 'Start Processing?'; }
+  else if (status === 'PROCESSING') { next = 'SHIPPED'; msg = 'Mark as Shipped?'; }
+  else if (status === 'SHIPPED') { next = 'DELIVERED'; msg = 'Mark as Delivered?'; }
+  else return;
+  if (!confirm(msg)) return;
+  try { await fetch(API+'/seller/orders/'+id+'/',{method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+localStorage.getItem('access_token')},body:JSON.stringify({status:next})}); loadOrders(); showToast('Updated to '+next.replace(/_/g,' '),'success'); } catch(e) {}
+}
+
+var reviewOrderId = null, reviewRating = 0;
+
+function openReviewModal(orderId) {
+  reviewOrderId = orderId; reviewRating = 0;
+  var order = allOrders.find(function(o){ return o.id === orderId; });
+  var names = order ? order.items.map(function(i){ return esc(i.product_name); }).join(', ') : '';
+  document.getElementById('review-order-label').textContent = 'Products: ' + names;
+  document.getElementById('review-comment').value = '';
+  renderStars();
+  document.getElementById('review-modal').style.display = 'flex';
+}
+function closeReviewModal() { document.getElementById('review-modal').style.display = 'none'; }
+function renderStars() {
+  var h = '';
+  for (var i = 1; i <= 5; i++) h += '<button onclick="reviewRating=' + i + ';renderStars()" class="star-btn ' + (i <= reviewRating ? 'text-yellow-500' : 'text-gray-300') + '">★</button>';
+  document.getElementById('review-stars').innerHTML = h;
+}
+async function submitReview() {
+  if (!reviewRating) { showToast('Please select a rating','error'); return; }
+  var order = allOrders.find(function(o){ return o.id === reviewOrderId; });
+  if (!order || !order.items.length) return;
+  var pid = order.items[0].product_id;
+  if (!pid) { showToast('Cannot review this product','error'); return; }
+  var token = localStorage.getItem('access_token');
+  try {
+    var res = await fetch(API + '/products/' + pid + '/review/', {method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}, body:JSON.stringify({rating:reviewRating, comment:document.getElementById('review-comment').value})});
+    if (res.ok) { closeReviewModal(); showToast('Review submitted!','success'); loadOrders(); }
+    else { var d = await res.json(); showToast(d.rating||d.detail||'Failed','error'); }
+  } catch(e) {}
+}
+
+function exportOrders() {
+  var csv = 'Order ID,Date,Customer,Products,Total,Status\n';
+  filteredOrders.forEach(function(o){ csv += '#ORD-'+o.id.slice(0,5).toUpperCase()+','+new Date(o.created_at).toLocaleDateString()+','+o.buyer_name+',"'+o.items.map(function(i){return i.product_name;}).join('; ')+'",'+o.total+','+o.status+'\n'; });
+  var blob = new Blob([csv],{type:'text/csv'}); var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'orders-export.csv'; a.click();
+}
+
+loadOrders();
+</script>
+{% endblock %}

@@ -1,0 +1,130 @@
+{% extends "layouts/base.html" %}
+{% block page_title %}Checkout{% endblock %}
+{% block page_subtitle %}<button onclick="history.back()" class="inline-flex items-center gap-1 text-gray-400 hover:text-[var(--primary)] font-bold text-sm mr-2 transition-colors"><i data-lucide="arrow-left" class="w-4 h-4"></i> Back</button> <a href="/marketplace/" class="text-gray-400 hover:text-[var(--primary)]">Shop</a> > <a href="/marketplace/cart/" class="text-gray-400 hover:text-[var(--primary)]">Cart</a> > <span class="font-bold text-[var(--primary)]">Checkout</span>{% endblock %}
+
+{% block extra_head %}
+<style>
+  .checkout-card { background:#fff; border-radius:14px; border:1px solid #f3f4f6; box-shadow:0 1px 3px rgba(0,0,0,0.04); padding:1.5rem; margin-bottom:1rem; }
+  .checkout-card h3 { font-family:'Hanken Grotesk',sans-serif; font-weight:700; font-size:1rem; color:#111827; margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem; }
+  .form-input { width:100%; padding:0.65rem 0.9rem; border:1.5px solid #e5e7eb; border-radius:10px; font-size:0.88rem; transition:all 0.2s; background:#fff; }
+  .form-input:focus { outline:none; border-color:var(--primary,#003fb1); box-shadow:0 0 0 3px rgba(0,63,177,0.06); }
+  .form-row { display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; } .form-group { margin-bottom:0.75rem; }
+  label { display:block; font-size:0.78rem; font-weight:600; color:#374151; margin-bottom:0.3rem; }
+  .field-error { color:#dc2626; font-size:0.72rem; margin-top:0.25rem; display:none; } .field-error.show { display:block; }
+  .delivery-option { display:flex; align-items:center; gap:1rem; padding:1rem; border:2px solid #e5e7eb; border-radius:12px; cursor:pointer; transition:all 0.2s; margin-bottom:0.5rem; }
+  .delivery-option:hover { border-color:#d1d5db; } .delivery-option.selected { border-color:var(--primary,#003fb1); background:#f0f4ff; }
+  .delivery-radio { width:20px; height:20px; border-radius:50%; border:2px solid #d1d5db; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .delivery-option.selected .delivery-radio { border-color:var(--primary,#003fb1); } .delivery-option.selected .delivery-radio::after { content:''; width:10px; height:10px; border-radius:50%; background:var(--primary,#003fb1); }
+  .summary-card { background:#fff; border-radius:14px; border:1px solid #f3f4f6; box-shadow:0 1px 3px rgba(0,0,0,0.04); padding:1.5rem; position:sticky; top:1rem; }
+  .summary-row { display:flex; justify-content:space-between; padding:0.45rem 0; font-size:0.85rem; color:#6b7280; }
+  .summary-total { display:flex; justify-content:space-between; padding:0.75rem 0; font-size:1.2rem; font-weight:700; color:#111827; border-top:1px solid #f3f4f6; margin-top:0.5rem; }
+  .summary-item { display:flex; gap:0.75rem; padding:0.5rem 0; border-bottom:1px solid #f9fafb; } .summary-item:last-child { border-bottom:none; }
+  .summary-thumb { width:48px; height:48px; border-radius:8px; object-fit:cover; background:#f3f4f6; flex-shrink:0; }
+  .btn { padding:0.75rem 1.5rem; border-radius:12px; font-weight:700; font-size:0.88rem; cursor:pointer; transition:all 0.2s; border:none; display:inline-flex; align-items:center; justify-content:center; gap:0.5rem; text-decoration:none; }
+  .btn-orange { background:#ea580c !important; color:#fff !important; } .btn-orange:hover { background:#c2410c !important; transform:translateY(-1px); box-shadow:0 6px 20px rgba(234,88,12,0.3); } .btn-orange:disabled { opacity:0.5; cursor:not-allowed; transform:none; box-shadow:none; }
+  .btn-outline { background:#fff; color:#374151; border:1.5px solid #e5e7eb; } .btn-outline:hover { border-color:var(--primary,#003fb1); color:var(--primary,#003fb1); }
+  @media(max-width:768px){ .form-row{grid-template-columns:1fr;} }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+  <div class="grid lg:grid-cols-3 gap-6" id="checkout-form-area">
+    <div class="lg:col-span-2">
+      <div class="checkout-card"><h3><i data-lucide="truck" class="w-5 h-5 text-[var(--primary)]"></i> Shipping Information</h3>
+        <div class="form-row"><div class="form-group"><label>First Name *</label><input class="form-input" id="ship-first" placeholder="Alex"><p class="field-error" id="err-first">Required</p></div><div class="form-group"><label>Last Name *</label><input class="form-input" id="ship-last" placeholder="Miller"><p class="field-error" id="err-last">Required</p></div></div>
+        <div class="form-group"><label>Street Address *</label><input class="form-input" id="ship-address" placeholder="123 Bark Avenue"><p class="field-error" id="err-address">Required</p></div>
+        <div class="form-row"><div class="form-group"><label>City *</label><input class="form-input" id="ship-city" placeholder="New York"><p class="field-error" id="err-city">Required</p></div><div class="form-group"><label>Phone *</label><input class="form-input" id="ship-phone" placeholder="+92 300 1234567"><p class="field-error" id="err-phone">Required</p></div></div>
+        <label class="flex items-center gap-2 cursor-pointer text-sm text-gray-600"><input type="checkbox" id="save-address" class="w-4 h-4 rounded text-[var(--primary)]"> Save this address to my profile</label>
+      </div>
+      <div class="checkout-card"><h3><i data-lucide="package" class="w-5 h-5 text-[var(--primary)]"></i> Delivery Method</h3>
+        <div class="delivery-option selected" onclick="selectDelivery('standard')" id="del-standard"><div class="delivery-radio"></div><div class="flex-1"><p class="font-bold text-sm">Standard Delivery</p><p class="text-xs text-gray-400">3-5 Business Days</p></div><span class="text-sm font-bold text-green-600">Free</span></div>
+        <div class="delivery-option" onclick="selectDelivery('express')" id="del-express"><div class="delivery-radio"></div><div class="flex-1"><p class="font-bold text-sm">Express Delivery</p><p class="text-xs text-gray-400">Next Day</p></div><span class="text-sm font-bold">Rs. 500</span></div>
+      </div>
+      <div class="checkout-card"><h3><i data-lucide="credit-card" class="w-5 h-5 text-[var(--primary)]"></i> Payment Method</h3>
+        <div class="delivery-option selected" id="pay-cod"><div class="delivery-radio"></div><div class="flex-1"><p class="font-bold text-sm">Cash on Delivery</p><p class="text-xs text-gray-400">Pay when you receive</p></div><span class="text-xs font-bold text-green-700 bg-green-50 px-2 py-1 rounded-full">Available</span></div>
+      </div>
+    </div>
+    <div class="lg:col-span-1">
+      <div class="summary-card" id="summary-card"><h3 class="font-bold text-lg mb-4" style="font-family:'Hanken Grotesk',sans-serif">Order Summary</h3>
+        <div id="summary-items"><p class="text-sm text-gray-400 text-center py-4">Loading...</p></div>
+        <div class="summary-row"><span>Subtotal</span><span id="sum-subtotal">Rs. 0</span></div>
+        <div class="summary-row"><span>Shipping</span><span id="sum-shipping">Rs. 200</span></div>
+        <div class="summary-row"><span>Estimated Tax (5%)</span><span id="sum-tax">Rs. 0</span></div>
+        <div class="summary-total"><span>Grand Total</span><span id="sum-total" class="text-[var(--primary)]">Rs. 0</span></div>
+        <button class="btn btn-orange w-full mt-4 text-base" id="complete-btn" onclick="placeOrder()"><i data-lucide="lock" class="w-5 h-5"></i> Order Now</button>
+        <p class="text-xs text-gray-400 text-center mt-3">By clicking Order Now, you agree to our Terms.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const API = '/api/marketplace';
+let cartData = null;
+let deliveryType = 'standard';
+
+async function loadCheckout() {
+  var token = localStorage.getItem('access_token');
+  if (!token) { window.location.href = '/signin/'; return; }
+  try {
+    var res = await fetch(API+'/cart/', {headers:{'Authorization':'Bearer '+token}});
+    if (!res.ok) throw new Error('Failed');
+    cartData = await res.json();
+    if (!cartData.items.length) { window.location.href = '/marketplace/cart/'; return; }
+    renderSummary();
+    lucide.createIcons();
+  } catch(e) { document.getElementById('summary-items').innerHTML = '<p class="text-sm text-red-400 text-center py-4">Could not load cart</p>'; }
+}
+
+function renderSummary() {
+  var items = document.getElementById('summary-items');
+  items.innerHTML = cartData.items.map(function(i){
+    var img = i.product_image || 'https://placehold.co/80/f3f4f6/9ca3af';
+    return '<div class="summary-item"><img src="'+img+'" class="summary-thumb" onerror="this.src=\'https://placehold.co/80/f3f4f6\'"><div class="flex-1"><p class="text-sm font-bold line-clamp-1">'+i.product_name+'</p><p class="text-xs text-gray-400">Qty: '+i.quantity+'</p></div><span class="text-sm font-bold">Rs. '+i.line_total.toLocaleString()+'</span></div>';
+  }).join('');
+  var subtotal = cartData.subtotal || 0;
+  var shipping = deliveryType === 'express' ? 500 : 200;
+  var tax = Math.round(subtotal * 0.05);
+  var total = subtotal + shipping + tax;
+  document.getElementById('sum-subtotal').textContent = 'Rs. '+subtotal.toLocaleString();
+  document.getElementById('sum-shipping').textContent = shipping === 0 ? 'Free' : 'Rs. '+shipping.toLocaleString();
+  document.getElementById('sum-tax').textContent = 'Rs. '+tax.toLocaleString();
+  document.getElementById('sum-total').textContent = 'Rs. '+total.toLocaleString();
+}
+
+function selectDelivery(type) { deliveryType = type; document.getElementById('del-standard').classList.toggle('selected', type==='standard'); document.getElementById('del-express').classList.toggle('selected', type==='express'); renderSummary(); }
+
+function validate() {
+  var valid = true;
+  ['ship-first','ship-last','ship-address','ship-city','ship-phone'].forEach(function(id){
+    var val = document.getElementById(id).value.trim();
+    var show = !val;
+    document.getElementById('err-'+id.replace('ship-','')).classList.toggle('show', show);
+    if (show) valid = false;
+  });
+  return valid;
+}
+
+async function placeOrder() {
+  if (!validate()) { showToast('Please fill all required fields','error'); return; }
+  var btn = document.getElementById('complete-btn');
+  btn.disabled = true; btn.innerHTML = '<i data-lucide="loader" class="w-5 h-5 animate-spin"></i> Placing Order...'; lucide.createIcons();
+  var token = localStorage.getItem('access_token');
+  var addr = document.getElementById('ship-first').value.trim()+' '+document.getElementById('ship-last').value.trim()+', '+document.getElementById('ship-address').value.trim()+', '+document.getElementById('ship-city').value.trim();
+  var phone = document.getElementById('ship-phone').value.trim();
+  try {
+    var res = await fetch(API+'/checkout/', {method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}, body:JSON.stringify({shipping_address:addr, contact_phone:phone, notes:''})});
+    var d = await res.json();
+    if (!res.ok) { showToast(d.error||d.cart||'Checkout failed','error'); btn.disabled=false; btn.innerHTML='<i data-lucide="lock" class="w-5 h-5"></i> Order Now'; lucide.createIcons(); return; }
+    showToast('Order placed!','success');
+    setTimeout(function(){ window.location.href='/marketplace/orders/manage/'; }, 500);
+  } catch(e) { btn.disabled=false; btn.innerHTML='<i data-lucide="lock" class="w-5 h-5"></i> Order Now'; lucide.createIcons(); }
+}
+
+loadCheckout();
+</script>
+{% endblock %}

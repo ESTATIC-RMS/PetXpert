@@ -1,0 +1,265 @@
+{% extends "layouts/base.html" %}
+{% block page_title %}Dashboard Overview{% endblock %}
+{% block page_subtitle %}<button onclick="history.back()" class="inline-flex items-center gap-1 text-gray-400 hover:text-[var(--primary)] font-bold text-sm mr-2 transition-colors"><i data-lucide="arrow-left" class="w-4 h-4"></i> Back</button> Welcome back! Here's what's happening with your store.{% endblock %}
+
+{% block extra_head %}
+<style>
+  :root { --card-r: 14px; }
+  .dash-stat-card {
+    background: #fff; border-radius: var(--card-r); padding: 1.35rem 1.5rem;
+    border: 1px solid #f3f4f6; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    display: flex; align-items: flex-start; gap: 1rem; transition: all 0.2s;
+  }
+  .dash-stat-card:hover { box-shadow: 0 8px 24px rgba(0,63,177,0.06); transform: translateY(-2px); }
+  .dash-stat-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .dash-stat-value { font-family: 'Hanken Grotesk', sans-serif; font-size: 1.5rem; font-weight: 700; color: #111827; line-height: 1.2; }
+  .dash-stat-label { font-size: 0.78rem; color: #6b7280; font-weight: 500; }
+  .dash-stat-sub { font-size: 0.7rem; color: #9ca3af; margin-top: 2px; }
+  .dash-badge { display: inline-flex; align-items: center; gap: 2px; font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 9999px; }
+  .dash-badge.green { background: #ecfdf5; color: #059669; }
+  .dash-badge.red { background: #fef2f2; color: #dc2626; }
+
+  .section-card {
+    background: #fff; border-radius: var(--card-r); border: 1px solid #f3f4f6;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04); overflow: hidden;
+  }
+  .section-header {
+    padding: 1rem 1.25rem; border-bottom: 1px solid #f3f4f6;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .section-header h3 { font-family: 'Hanken Grotesk', sans-serif; font-weight: 700; font-size: 0.95rem; color: #111827; }
+
+  /* Order table */
+  .order-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  .order-table th { text-align: left; padding: 0.7rem 1.25rem; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; background: #fafafa; border-bottom: 1px solid #f3f4f6; }
+  .order-table td { padding: 0.75rem 1.25rem; border-bottom: 1px solid #f9fafb; color: #374151; }
+  .order-table tr:hover td { background: #fafaff; }
+  .order-table .order-id { font-family: monospace; font-size: 0.75rem; color: var(--primary, #003fb1); font-weight: 600; }
+
+  .status-pill {
+    display: inline-block; padding: 3px 10px; border-radius: 9999px; font-size: 0.68rem;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .status-PAID, .status-Processing, .status-PROCESSING { background: #eff6ff; color: #2563eb; }
+  .status-SHIPPED, .status-Shipped { background: #f5f3ff; color: #7c3aed; }
+  .status-DELIVERED, .status-Delivered { background: #ecfdf5; color: #059669; }
+  .status-CANCELLED, .status-Refunded, .status-Cancelled { background: #fef2f2; color: #dc2626; }
+  .status-PENDING_PAYMENT, .status-Pending { background: #fffbeb; color: #d97706; }
+
+  /* Top selling list */
+  .top-item {
+    display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1.25rem;
+    border-bottom: 1px solid #f9fafb; transition: background 0.15s;
+  }
+  .top-item:last-child { border-bottom: none; }
+  .top-item:hover { background: #fafaff; }
+  .top-item-thumb { width: 42px; height: 42px; border-radius: 10px; object-fit: cover; background: #f3f4f6; flex-shrink: 0; }
+
+  /* Search bar */
+  .dash-search {
+    width: 280px; padding: 0.55rem 1rem 0.55rem 2.5rem; border: 1.5px solid #e5e7eb;
+    border-radius: 10px; font-size: 0.82rem; background: #fff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .dash-search:focus { outline: none; border-color: var(--primary, #003fb1); box-shadow: 0 0 0 3px rgba(0,63,177,0.08); }
+
+  .btn-sm-primary {
+    background: var(--primary, #003fb1); color: #fff; padding: 0.5rem 1rem;
+    border-radius: 10px; font-size: 0.78rem; font-weight: 700; border: none; cursor: pointer;
+    transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.35rem;
+  }
+  .btn-sm-primary:hover { background: #1a56db; }
+  .btn-sm-outline {
+    background: #fff; color: var(--primary, #003fb1); border: 1.5px solid var(--primary, #003fb1);
+    padding: 0.5rem 1rem; border-radius: 10px; font-size: 0.78rem; font-weight: 700;
+    cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.35rem;
+    text-decoration: none;
+  }
+  .btn-sm-outline:hover { background: #eff6ff; }
+
+  #not-seller, #sellerDash { display: none; }
+  .skeleton { background: linear-gradient(90deg,#f3f4f6 25%,#e5e7eb 50%,#f3f4f6 75%); background-size:200% 100%; animation:shimmer 1.5s infinite; border-radius:8px; }
+  @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Loading Skeleton -->
+<div id="dashSkeleton">
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="skeleton h-24 rounded-2xl"></div><div class="skeleton h-24 rounded-2xl"></div>
+    <div class="skeleton h-24 rounded-2xl"></div><div class="skeleton h-24 rounded-2xl"></div>
+  </div>
+  <div class="grid lg:grid-cols-10 gap-5">
+    <div class="skeleton h-80 rounded-2xl lg:col-span-7"></div>
+    <div class="skeleton h-80 rounded-2xl lg:col-span-3"></div>
+  </div>
+</div>
+
+<!-- Not Seller -->
+<div id="not-seller" class="text-center py-20">
+  <i data-lucide="store" class="w-16 h-16 mx-auto mb-4 text-gray-300"></i>
+  <h2 class="text-xl font-bold text-gray-500" style="font-family:'Hanken Grotesk',sans-serif">Seller Account Required</h2>
+  <p class="text-gray-400 mt-1 mb-5">Sign up as a seller to access your dashboard.</p>
+  <a href="/seller/signup/" class="btn-sm-primary"><i data-lucide="store" class="w-4 h-4"></i> Become a Seller</a>
+</div>
+
+<!-- Seller Dashboard -->
+<div id="sellerDash">
+
+  <!-- Stats Row -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="dash-stat-card">
+      <div class="dash-stat-icon bg-blue-50"><i data-lucide="banknote" class="w-5 h-5 text-blue-600"></i></div>
+      <div>
+        <p class="dash-stat-label">Total Sales</p>
+        <p class="dash-stat-value" id="s-revenue">Rs. 0</p>
+        <p class="dash-stat-sub">vs last 30 days <span class="dash-badge green" id="s-revenue-badge">--</span></p>
+      </div>
+    </div>
+    <div class="dash-stat-card">
+      <div class="dash-stat-icon bg-orange-50"><i data-lucide="package" class="w-5 h-5 text-orange-500"></i></div>
+      <div>
+        <p class="dash-stat-label">Active Listings</p>
+        <p class="dash-stat-value" id="s-products">0</p>
+        <p class="dash-stat-sub">Updated now</p>
+      </div>
+    </div>
+    <div class="dash-stat-card">
+      <div class="dash-stat-icon bg-amber-50"><i data-lucide="clock" class="w-5 h-5 text-amber-500"></i></div>
+      <div>
+        <p class="dash-stat-label">Pending Orders</p>
+        <p class="dash-stat-value" id="s-pending">0</p>
+        <p class="dash-stat-sub">Requires attention <span class="dash-badge red" id="s-pending-badge">--</span></p>
+      </div>
+    </div>
+    <div class="dash-stat-card">
+      <div class="dash-stat-icon bg-green-50"><i data-lucide="star" class="w-5 h-5 text-green-600"></i></div>
+      <div>
+        <p class="dash-stat-label">Store Rating</p>
+        <p class="dash-stat-value" id="s-rating">--</p>
+        <p class="dash-stat-sub">From reviews</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content: Two Columns -->
+  <div class="grid lg:grid-cols-10 gap-5">
+    <!-- Left: Recent Orders (70%) -->
+    <div class="section-card lg:col-span-7">
+      <div class="section-header">
+        <h3>Recent Orders</h3>
+        <a href="#" class="text-xs text-[var(--primary)] font-bold hover:underline">View All</a>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="order-table">
+          <thead><tr><th>Order ID</th><th>Customer</th><th>Product</th><th>Status</th><th class="text-right">Total</th></tr></thead>
+          <tbody id="s-orders-body"><tr><td colspan="5" class="text-center py-10 text-gray-400">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Right: Top Selling (30%) -->
+    <div class="section-card lg:col-span-3 flex flex-col">
+      <div class="section-header"><h3>Top Selling</h3></div>
+      <div id="s-top-products" class="flex-1">
+        <p class="text-center py-10 text-gray-400 text-sm">Loading...</p>
+      </div>
+      <div class="p-4 border-t border-gray-100">
+        <a href="/marketplace/seller/" class="btn-sm-outline w-full justify-center">Inventory Management</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const API = '/api/marketplace';
+
+async function loadDashboard() {
+  var user; try { user = JSON.parse(localStorage.getItem('user')||'{}'); } catch(e) { user = {}; }
+  if (user.role !== 'SELLER') {
+    document.getElementById('dashSkeleton').style.display = 'none';
+    document.getElementById('not-seller').style.display = 'block';
+    lucide.createIcons(); return;
+  }
+
+  try {
+    var token = localStorage.getItem('access_token');
+    var headers = {'Authorization': 'Bearer ' + token};
+    var [sumRes, ordRes, prodRes] = await Promise.all([
+      fetch(API + '/seller/sales-summary/', {headers}),
+      fetch(API + '/seller/orders/', {headers}),
+      fetch(API + '/seller/products/', {headers}),
+    ]);
+    var summary = await sumRes.json();
+    var orders = await ordRes.json();
+    var products = await prodRes.json();
+
+    document.getElementById('dashSkeleton').style.display = 'none';
+    document.getElementById('sellerDash').style.display = 'block';
+
+    // Stats
+    document.getElementById('s-revenue').textContent = 'Rs. ' + summary.total_revenue.toLocaleString();
+    document.getElementById('s-revenue-badge').textContent = '+' + summary.total_orders + ' orders';
+    document.getElementById('s-products').textContent = summary.products_count;
+    document.getElementById('s-pending').textContent = summary.pending_orders;
+    document.getElementById('s-pending-badge').textContent = summary.pending_orders > 0 ? 'Needs action' : 'Clear';
+
+    // Store rating
+    var rating = products.length ? (products.reduce(function(s,p){return s+(p.rating||0);},0) / Math.max(products.length,1)).toFixed(1) : '0.0';
+    document.getElementById('s-rating').textContent = rating + ' / 5.0';
+
+    // Orders table
+    var tbody = document.getElementById('s-orders-body');
+    if (!orders.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="text-center py-10 text-gray-400">No orders yet</td></tr>';
+    } else {
+      tbody.innerHTML = orders.slice(0, 8).map(function(o) {
+        var itemNames = o.items.map(function(i){return i.product_name;}).join(', ');
+        return '<tr>' +
+          '<td class="order-id">#PX-' + o.id.slice(0,4).toUpperCase() + '</td>' +
+          '<td class="font-medium">' + o.buyer_name + '</td>' +
+          '<td class="text-gray-500">' + (itemNames.length > 30 ? itemNames.slice(0,30)+'...' : itemNames) + '</td>' +
+          '<td><span class="status-pill status-' + o.status + '">' + o.status.replace(/_/g,' ') + '</span></td>' +
+          '<td class="text-right font-bold">Rs. ' + o.total.toLocaleString() + '</td>' +
+        '</tr>';
+      }).join('');
+    }
+
+    // Top selling products
+    var topList = document.getElementById('s-top-products');
+    var sorted = products.slice().sort(function(a,b){ return (b.sales_count||0) - (a.sales_count||0); }).slice(0, 5);
+    if (!sorted.length) {
+      topList.innerHTML = '<p class="text-center py-10 text-gray-400 text-sm">No products yet</p>';
+    } else {
+      topList.innerHTML = sorted.map(function(p) {
+        var img = (p.images && p.images[0]) ? p.images[0].url : (p.image || '');
+        if (!img) img = 'https://placehold.co/80/f3f4f6/9ca3af?text=No+Img';
+        var revenue = (p.price || 0) * (p.sales_count || 0);
+        return '<div class="top-item">' +
+          '<img src="' + img + '" class="top-item-thumb" onerror="this.src=\'https://placehold.co/80/f3f4f6/9ca3af\'">' +
+          '<div class="flex-1 min-w-0">' +
+            '<p class="font-bold text-sm text-gray-900 line-clamp-1">' + p.name + '</p>' +
+            '<p class="text-xs text-gray-400">' + (p.sales_count||0) + ' units sold</p>' +
+            '<p class="text-xs font-bold text-green-600">+Rs. ' + revenue.toLocaleString() + '</p>' +
+          '</div>' +
+          '<span class="text-xs text-yellow-600 font-bold">★ ' + (p.rating||0).toFixed(1) + '</span>' +
+        '</div>';
+      }).join('');
+    }
+
+    lucide.createIcons();
+  } catch(e) {
+    console.error(e);
+    document.getElementById('dashSkeleton').style.display = 'none';
+    document.getElementById('sellerDash').style.display = 'block';
+    document.getElementById('sellerDash').innerHTML = '<div class="text-center py-16 text-gray-400"><i data-lucide="wifi-off" class="w-10 h-10 mx-auto mb-3"></i><p class="font-semibold">Could not load dashboard</p><p class="text-sm mt-1">' + e.message + '</p></div>';
+    lucide.createIcons();
+  }
+}
+
+loadDashboard();
+</script>
+{% endblock %}
