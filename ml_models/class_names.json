@@ -1,0 +1,10 @@
+{
+  "class_names": [
+    "Dermatitis",
+    "Fungal_infections",
+    "Healthy",
+    "Hypersensitivity",
+    "demodicosis",
+    "ringworm"
+  ]
+}

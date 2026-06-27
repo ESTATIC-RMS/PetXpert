@@ -1,0 +1,616 @@
+{% extends "layouts/base.html" %}
+{% block title %}Appointments - PetXpert{% endblock %}
+{% block page_title %}Appointments{% endblock %}
+{% block page_subtitle %}Manage and track your appointments{% endblock %}
+
+{% block extra_head %}
+<style>
+    .filter-btn {
+        padding: 6px 14px; border-radius: 9999px; font-size: 12px; font-weight: 700;
+        cursor: pointer; transition: all 0.15s; border: 1.5px solid #e7e7f3;
+        background: #fff; color: #737686;
+    }
+    .filter-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+    .appt-card {
+        background: #fff; border: 1px solid #e7e7f3; border-radius: 1rem;
+        overflow: hidden; transition: box-shadow 0.2s;
+    }
+    .appt-card:hover { box-shadow: 0 8px 24px rgba(0,63,177,0.07); }
+
+    .appt-card-header {
+        display: flex; align-items: center; gap: 1rem;
+        padding: 1rem 1.25rem; cursor: pointer; user-select: none;
+    }
+    .appt-card-body { border-top: 1px solid #f3f3fe; display: none; }
+    .appt-card-body.open { display: block; }
+
+    .status-pill { display:inline-flex; align-items:center; padding:3px 10px; border-radius:9999px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; }
+    .status-CONFIRMED    { background:#d1fae5; color:#065f46; }
+    .status-PENDING      { background:#fef3c7; color:#92400e; }
+    .status-COMPLETED    { background:#f0fdf4; color:#166534; }
+    .status-CANCELLED    { background:#fee2e2; color:#991b1b; }
+    .status-IN_PROGRESS  { background:#fef9c3; color:#713f12; }
+
+    .action-btn {
+        padding: 6px 14px; border-radius: 0.5rem; font-size: 12px; font-weight: 700;
+        cursor: pointer; transition: all 0.15s; border: none; display: inline-flex; align-items: center; gap: 4px;
+    }
+    .btn-cancel    { background:#fee2e2; color:#991b1b; }
+    .btn-cancel:hover { background:#fca5a5; }
+    .btn-activate  { background:#d1fae5; color:#065f46; }
+    .btn-activate:hover { background:#6ee7b7; }
+    .btn-complete  { background:#dbeafe; color:#1e40af; }
+    .btn-complete:hover { background:#93c5fd; }
+    .btn-reactivate { background:#e0e7ff; color:#3730a3; }
+    .btn-reactivate:hover { background:#c7d2fe; }
+    .btn-prescription { background:#f5f3ff; color:#6d28d9; }
+    .btn-prescription:hover { background:#ede9fe; }
+    .btn-review { background: linear-gradient(135deg,#fef3c7,#fde68a); color:#92400e; border:1px solid #fcd34d; }
+    .btn-review:hover { background: linear-gradient(135deg,#fde68a,#fbbf24); box-shadow:0 4px 12px rgba(251,191,36,.35); }
+    .btn-reviewed { background:#ecfdf5; color:#065f46; border:1px solid #6ee7b7; cursor:default; }
+
+    .toast {
+        position: fixed; bottom: 1.5rem; right: 1.5rem; background: #1e293b; color: #fff;
+        padding: 0.75rem 1.25rem; border-radius: 0.75rem; font-size: 13px; font-weight: 600;
+        z-index: 9999; display: flex; align-items: center; gap: 0.5rem;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.2); transform: translateY(80px); opacity:0;
+        transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { background: #065f46; }
+    .toast.error { background: #991b1b; }
+    .toast.warning { background: #92400e; }
+
+    /* ── Review Modal ───────────────────────────────────── */
+    #reviewModalBackdrop {
+        position:fixed; inset:0; background:rgba(15,23,42,.55); backdrop-filter:blur(6px);
+        z-index:9999; display:flex; align-items:center; justify-content:center; padding:1rem;
+        opacity:0; pointer-events:none; transition:opacity .25s;
+    }
+    #reviewModalBackdrop.open { opacity:1; pointer-events:auto; }
+    #reviewModal {
+        background:#fff; border-radius:1.5rem; padding:2rem; width:100%; max-width:460px;
+        box-shadow:0 24px 60px rgba(0,0,0,.18),0 8px 24px rgba(0,63,177,.12);
+        transform:translateY(20px) scale(.96); transition:transform .3s cubic-bezier(.34,1.56,.64,1);
+        border:1px solid #e7e7f3;
+    }
+    #reviewModalBackdrop.open #reviewModal { transform:translateY(0) scale(1); }
+    .review-star-row { display:flex; gap:.5rem; justify-content:center; margin:1.25rem 0; }
+    .review-star {
+        font-size:2.5rem; cursor:pointer; transition:transform .15s, filter .15s;
+        filter:grayscale(1) opacity(.35);
+        user-select:none;
+    }
+    .review-star.active, .review-star.hovered { filter:none; transform:scale(1.15); }
+    .review-star:hover { transform:scale(1.2); }
+    .review-label {
+        text-align:center; font-size:.8rem; font-weight:700; letter-spacing:.06em;
+        text-transform:uppercase; color:#9ca3af; min-height:1.2em; transition:color .15s;
+    }
+    .review-label.filled { color:#f59e0b; }
+
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 640px) { .detail-grid { grid-template-columns: 1fr; } }
+    .detail-block { background: #f8fafc; border-radius: 0.75rem; padding: 1rem; }
+    .detail-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 0.25rem; }
+    .detail-value { font-size: 14px; font-weight: 600; color: #191b23; }
+
+    .empty-state { text-align:center; padding: 4rem 2rem; color: #9ca3af; }
+    .skeleton { background: linear-gradient(90deg,#e7e7f3 25%,#f3f3fe 50%,#e7e7f3 75%); background-size:200% 100%; animation:shimmer 1.5s infinite; border-radius:1rem; }
+    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+    .chevron { transition: transform 0.2s; }
+    .chevron.open { transform: rotate(180deg); }
+
+
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Toast -->
+<div id="toast" class="toast"></div>
+
+<!-- Header Controls -->
+<div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+    <div class="flex flex-wrap gap-2" id="filterBtns">
+        <button class="filter-btn active" data-filter="ALL">All</button>
+        <button class="filter-btn" data-filter="CONFIRMED">Confirmed</button>
+        <button class="filter-btn" data-filter="IN_PROGRESS">In Progress</button>
+        <button class="filter-btn" data-filter="PENDING">Pending</button>
+        <button class="filter-btn" data-filter="COMPLETED">Completed</button>
+        <button class="filter-btn" data-filter="CANCELLED">Cancelled</button>
+    </div>
+    <a href="/veterinarians/" id="bookApptBtn"
+       class="bg-[var(--primary)] text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-blue-800 transition-colors">
+        <i data-lucide="calendar-plus" class="w-4 h-4"></i> Book Appointment
+    </a>
+</div>
+
+<!-- Skeleton -->
+<div id="apptSkeleton" class="space-y-3">
+    <div class="skeleton h-20"></div>
+    <div class="skeleton h-20"></div>
+    <div class="skeleton h-20"></div>
+</div>
+
+<!-- Appointments List -->
+<div id="apptList" class="space-y-3 hidden"></div>
+
+<!-- ── Review Modal ───────────────────────────────────────────────────── -->
+<div id="reviewModalBackdrop" role="dialog" aria-modal="true" aria-label="Review Veterinarian">
+    <div id="reviewModal">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-yellow-50 flex items-center justify-center flex-shrink-0" id="reviewVetImgWrap">
+                    <i data-lucide="star" class="w-5 h-5 text-yellow-400"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Rate your visit</p>
+                    <p class="font-bold text-gray-900 text-sm" id="reviewVetName">Dr. Veterinarian</p>
+                </div>
+            </div>
+            <button onclick="closeReviewModal()" class="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors" aria-label="Close">
+                <i data-lucide="x" class="w-4 h-4 text-gray-500"></i>
+            </button>
+        </div>
+
+        <div class="border-t border-gray-100 pt-4">
+            <!-- Star Rating -->
+            <p class="text-center text-sm font-semibold text-gray-600 mb-1">How was your experience?</p>
+            <div class="review-star-row" id="reviewStarRow">
+                <span class="review-star" data-val="1">⭐</span>
+                <span class="review-star" data-val="2">⭐</span>
+                <span class="review-star" data-val="3">⭐</span>
+                <span class="review-star" data-val="4">⭐</span>
+                <span class="review-star" data-val="5">⭐</span>
+            </div>
+            <p class="review-label" id="reviewRatingLabel">Tap a star to rate</p>
+
+            <!-- Comment -->
+            <div class="mt-4">
+                <label class="block text-xs font-bold text-gray-500 mb-1.5" for="reviewComment">Share your experience <span class="font-normal text-gray-400">(optional)</span></label>
+                <textarea id="reviewComment" rows="3"
+                    placeholder="Tell others what made this visit great or what could be improved..."
+                    class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 resize-none focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition-all"></textarea>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex gap-3 mt-4">
+                <button onclick="closeReviewModal()" class="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">Cancel</button>
+                <button id="reviewSubmitBtn" onclick="submitReview()"
+                    class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-yellow-400 to-amber-400 text-sm font-bold text-amber-900 hover:from-yellow-500 hover:to-amber-500 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                    <i data-lucide="star" class="w-4 h-4"></i> Submit Review
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Empty State -->
+<div id="apptEmpty" class="hidden empty-state">
+    <i data-lucide="calendar-x" class="w-12 h-12 mx-auto mb-3 text-gray-300"></i>
+    <p class="font-bold text-gray-500 text-lg">No appointments found</p>
+    <p class="text-sm text-gray-400 mt-1">Try a different filter or book a new appointment.</p>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const SPECIES_ICONS = { DOG:'🐕', CAT:'🐈', BIRD:'🦜', RABBIT:'🐇', FISH:'🐠', REPTILE:'🦎', OTHER:'🐾' };
+
+let allAppointments = [];
+let currentFilter = 'ALL';
+let userRole = '';
+
+// ─── Utilities ───────────────────────────────────────────────────────────────
+function fmt(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-PK', { weekday:'long', year:'numeric', month:'long', day:'numeric' })
+         + ' at ' + d.toLocaleTimeString('en-PK', { hour:'numeric', minute:'2-digit', hour12:true });
+}
+function fmtShort(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-PK', { month:'short', day:'numeric', year:'numeric' })
+         + ' · ' + d.toLocaleTimeString('en-PK', { hour:'numeric', minute:'2-digit', hour12:true });
+}
+
+function statusBadge(s) {
+    const L = { CONFIRMED:'Confirmed', PENDING:'Pending',
+                COMPLETED:'Completed', CANCELLED:'Cancelled', IN_PROGRESS:'In Progress', NO_SHOW:'No Show' };
+    return `<span class="status-pill status-${s}">${L[s]||s}</span>`;
+}
+
+function showToast(msg, type='success') {
+    const t = document.getElementById('toast');
+    const icons = { success:'check-circle', error:'alert-circle', warning:'alert-triangle' };
+    t.innerHTML = `<i data-lucide="${icons[type]||'info'}" class="w-4 h-4"></i> ${msg}`;
+    t.className = `toast ${type} show`;
+    lucide.createIcons();
+    setTimeout(() => { t.classList.remove('show'); }, 3500);
+}
+
+
+
+// ─── Action buttons by role & status ────────────────────────────────────────
+function getActions(appt) {
+    const s = appt.status;
+    const isPast = new Date(appt.scheduled_at) < new Date();
+    const btns = [];
+
+    if (userRole === 'VETERINARIAN') {
+        if (s === 'CONFIRMED')    btns.push({ action:'activate',  label:'Start', cls:'btn-activate', icon:'play-circle' });
+        if (s === 'IN_PROGRESS')  btns.push({ action:'complete',  label:'Complete', cls:'btn-complete', icon:'check-circle' });
+        if (s === 'COMPLETED')    btns.push({ action:'write_prescription', label:'Write Prescription', cls:'btn-prescription', icon:'file-text' });
+        if (['CONFIRMED','PENDING','IN_PROGRESS'].includes(s))
+            btns.push({ action:'cancel', label:'Cancel', cls:'btn-cancel', icon:'x-circle' });
+    } else {
+        // Pet owner
+        if (['CONFIRMED','PENDING'].includes(s))
+            btns.push({ action:'cancel', label:'Cancel', cls:'btn-cancel', icon:'x-circle' });
+        if (s === 'CANCELLED' && !isPast)
+            btns.push({ action:'activate', label:'Reactivate', cls:'btn-reactivate', icon:'play-circle' });
+        // Review button for completed appointments
+        if (s === 'COMPLETED') {
+            if (appt.has_review) {
+                btns.push({ action:'reviewed', label:'Reviewed ✓', cls:'btn-reviewed', icon:'star' });
+            } else {
+                btns.push({ action:'leave_review', label:'Leave a Review', cls:'btn-review', icon:'star' });
+            }
+        }
+    }
+    return btns;
+}
+
+// ─── Render appointment card ─────────────────────────────────────────────────
+function renderCard(appt) {
+    const actions = getActions(appt);
+    const actionsHtml = actions.map(b =>
+        `<button class="action-btn ${b.cls}" onclick="doAction('${appt.id}','${b.action}',event)">
+            <i data-lucide="${b.icon}" class="w-3.5 h-3.5"></i>
+            ${b.label}
+         </button>`
+    ).join('');
+
+    const petIcon = SPECIES_ICONS[appt.pet.species] || '🐾';
+    const vetImgHtml = appt.vet.image
+        ? `<img src="${appt.vet.image}" class="w-10 h-10 rounded-xl object-cover flex-shrink-0" alt="">`
+        : `<div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0"><i data-lucide="stethoscope" class="w-5 h-5 text-blue-600"></i></div>`;
+
+    // For vet view, show owner info; for pet owner, show vet info
+    const primaryTitle = userRole === 'VETERINARIAN'
+        ? `${appt.owner.name || appt.owner.email} <span class="text-gray-400 font-normal text-xs">with</span> ${appt.pet.name}`
+        : `Dr. ${appt.vet.name}`;
+    const secondaryLine = userRole === 'VETERINARIAN'
+        ? `${appt.pet.species}${appt.pet.breed?' · '+appt.pet.breed:''}`
+        : `${appt.vet.specialization || 'General'}${appt.vet.clinic_name?' · '+appt.vet.clinic_name:''}`;
+
+    // Payment block
+    let paymentHtml = '';
+    if (appt.payment) {
+        const p = appt.payment;
+        const payStatus = p.status === 'COMPLETED'
+            ? '<span class="text-green-600 font-bold">✓ Paid</span>'
+            : `<span class="text-yellow-600 font-bold">${p.status}</span>`;
+        paymentHtml = `
+            <div class="detail-block">
+                <div class="detail-label">Payment</div>
+                <div class="detail-value">${payStatus}</div>
+                <div class="text-xs text-gray-500 mt-1">PKR ${p.amount.toLocaleString()} via ${p.gateway}</div>
+                ${p.paid_at ? `<div class="text-xs text-gray-400 mt-0.5">Paid: ${fmtShort(p.paid_at)}</div>` : ''}
+                <div class="text-xs text-gray-300 mt-0.5 break-all">TXN: ${p.gateway_txn_id}</div>
+            </div>`;
+    } else {
+        paymentHtml = `<div class="detail-block"><div class="detail-label">Payment</div><div class="detail-value text-gray-400">No payment record</div></div>`;
+    }
+
+    return `
+    <div class="appt-card" id="card-${appt.id}" data-status="${appt.status}">
+        <!-- Header Row -->
+        <div class="appt-card-header" onclick="toggleCard('${appt.id}')">
+            ${vetImgHtml}
+            <div class="flex-1 min-w-0">
+                <p class="font-bold text-gray-900 text-sm">${primaryTitle}</p>
+                <p class="text-xs text-gray-500 truncate">${fmtShort(appt.scheduled_at)}${secondaryLine?' · '+secondaryLine:''}</p>
+            </div>
+            <div class="flex items-center gap-3 flex-shrink-0">
+                ${statusBadge(appt.status)}
+                <i data-lucide="chevron-down" class="w-4 h-4 text-gray-400 chevron" id="chev-${appt.id}"></i>
+            </div>
+        </div>
+
+        <!-- Expanded Body -->
+        <div class="appt-card-body" id="body-${appt.id}">
+            <div class="p-4 space-y-4">
+
+                <!-- Detail Grid -->
+                <div class="detail-grid">
+                    <div class="detail-block">
+                        <div class="detail-label">Date & Time</div>
+                        <div class="detail-value">${fmt(appt.scheduled_at)}</div>
+                        <div class="text-xs text-gray-400 mt-0.5">${appt.duration_minutes} minutes</div>
+                    </div>
+                    <div class="detail-block">
+                        <div class="detail-label">Appointment Status</div>
+                        <div class="mt-1">${statusBadge(appt.status)}</div>
+                    </div>
+                    <div class="detail-block">
+                        <div class="detail-label">Pet</div>
+                        <div class="detail-value">${petIcon} ${appt.pet.name}</div>
+                        <div class="text-xs text-gray-400 mt-0.5">${appt.pet.species}${appt.pet.breed?' · '+appt.pet.breed:''}</div>
+                    </div>
+                    <div class="detail-block">
+                        <div class="detail-label">Consultation Fee</div>
+                        <div class="detail-value">PKR ${appt.fee_charged.toLocaleString()}</div>
+                    </div>
+                    <div class="detail-block">
+                        <div class="detail-label">Veterinarian</div>
+                        <div class="detail-value">Dr. ${appt.vet.name}</div>
+                        ${appt.vet.clinic_name?`<div class="text-xs text-gray-400 mt-0.5">${appt.vet.clinic_name}</div>`:''}
+                        ${appt.vet.phone_number?`<div class="text-xs text-gray-400">${appt.vet.phone_number}</div>`:''}
+                    </div>
+                    ${userRole==='VETERINARIAN'?`
+                    <div class="detail-block">
+                        <div class="detail-label">Pet Owner</div>
+                        <div class="detail-value">${appt.owner.name||'—'}</div>
+                        <div class="text-xs text-gray-400 mt-0.5">${appt.owner.email}</div>
+                    </div>`:''}
+                    ${paymentHtml}
+                    ${appt.reason?`
+                    <div class="detail-block" style="grid-column:1/-1">
+                        <div class="detail-label">Reason for Visit</div>
+                        <div class="detail-value font-normal text-gray-700">${appt.reason}</div>
+                    </div>`:''}
+                </div>
+
+                <!-- Actions -->
+                ${actions.length ? `
+                <div class="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
+                    ${actionsHtml}
+                </div>` : ''}
+            </div>
+        </div>
+    </div>`;
+}
+
+// ─── Toggle expand ───────────────────────────────────────────────────────────
+function toggleCard(id) {
+    const body = document.getElementById('body-' + id);
+    const chev = document.getElementById('chev-' + id);
+    body.classList.toggle('open');
+    chev.classList.toggle('open');
+    lucide.createIcons();
+}
+
+// ─── Filter ───────────────────────────────────────────────────────────────────
+function applyFilter(filter) {
+    currentFilter = filter;
+    document.querySelectorAll('.filter-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.filter === filter);
+    });
+    const filtered = filter === 'ALL' ? allAppointments : allAppointments.filter(a => a.status === filter);
+    const list = document.getElementById('apptList');
+    const empty = document.getElementById('apptEmpty');
+    if (!filtered.length) {
+        list.innerHTML = '';
+        list.classList.add('hidden');
+        empty.classList.remove('hidden');
+    } else {
+        list.innerHTML = filtered.map(renderCard).join('');
+        list.classList.remove('hidden');
+        empty.classList.add('hidden');
+        lucide.createIcons();
+    }
+
+    // Update URL without reloading
+    const url = new URL(window.location);
+    if (filter === 'ALL') {
+        url.searchParams.delete('filter');
+    } else {
+        url.searchParams.set('filter', filter);
+    }
+    window.history.replaceState({}, '', url);
+}
+
+// ─── Review Modal State ───────────────────────────────────────────────────────
+let _reviewApptId = null;
+let _reviewVetId  = null;
+let _reviewRating = 0;
+
+const RATING_LABELS = ['', 'Poor 😞', 'Fair 😐', 'Good 🙂', 'Great 😊', 'Excellent 🌟'];
+
+function openReviewModal(apptId, vetName, vetId, vetImg) {
+    _reviewApptId = apptId;
+    _reviewVetId  = vetId;
+    _reviewRating = 0;
+
+    // Reset UI
+    document.getElementById('reviewVetName').textContent = 'Dr. ' + vetName;
+    document.getElementById('reviewComment').value = '';
+    document.getElementById('reviewRatingLabel').textContent = 'Tap a star to rate';
+    document.getElementById('reviewRatingLabel').className = 'review-label';
+    document.querySelectorAll('.review-star').forEach(s => s.classList.remove('active','hovered'));
+
+    // Vet avatar
+    const wrap = document.getElementById('reviewVetImgWrap');
+    if (vetImg) {
+        wrap.innerHTML = `<img src="${vetImg}" class="w-full h-full object-cover rounded-xl" alt="">`;
+    } else {
+        wrap.innerHTML = `<i data-lucide="stethoscope" class="w-5 h-5 text-yellow-400"></i>`;
+    }
+
+    document.getElementById('reviewModalBackdrop').classList.add('open');
+    lucide.createIcons();
+}
+
+function closeReviewModal() {
+    document.getElementById('reviewModalBackdrop').classList.remove('open');
+}
+
+// Star hover & click
+document.getElementById('reviewStarRow').addEventListener('mouseover', e => {
+    const star = e.target.closest('.review-star');
+    if (!star) return;
+    const val = +star.dataset.val;
+    document.querySelectorAll('.review-star').forEach(s => {
+        s.classList.toggle('hovered', +s.dataset.val <= val);
+    });
+    document.getElementById('reviewRatingLabel').textContent = RATING_LABELS[val];
+    document.getElementById('reviewRatingLabel').className = 'review-label filled';
+});
+document.getElementById('reviewStarRow').addEventListener('mouseleave', () => {
+    document.querySelectorAll('.review-star').forEach(s => s.classList.remove('hovered'));
+    document.getElementById('reviewRatingLabel').textContent = _reviewRating ? RATING_LABELS[_reviewRating] : 'Tap a star to rate';
+    document.getElementById('reviewRatingLabel').className = _reviewRating ? 'review-label filled' : 'review-label';
+});
+document.getElementById('reviewStarRow').addEventListener('click', e => {
+    const star = e.target.closest('.review-star');
+    if (!star) return;
+    _reviewRating = +star.dataset.val;
+    document.querySelectorAll('.review-star').forEach(s => {
+        s.classList.toggle('active', +s.dataset.val <= _reviewRating);
+    });
+    document.getElementById('reviewRatingLabel').textContent = RATING_LABELS[_reviewRating];
+    document.getElementById('reviewRatingLabel').className = 'review-label filled';
+});
+
+// Close on backdrop click
+document.getElementById('reviewModalBackdrop').addEventListener('click', e => {
+    if (e.target === document.getElementById('reviewModalBackdrop')) closeReviewModal();
+});
+
+async function submitReview() {
+    if (!_reviewRating) {
+        showToast('Please select a star rating first.', 'warning');
+        return;
+    }
+    const btn = document.getElementById('reviewSubmitBtn');
+    const comment = document.getElementById('reviewComment').value.trim();
+    btn.disabled = true;
+    btn.innerHTML = `<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> Submitting...`;
+    lucide.createIcons();
+
+    try {
+        const res = await authenticatedFetch(`/api/veterinarians/${_reviewVetId}/reviews/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                appointment: _reviewApptId,
+                rating: _reviewRating,
+                comment: comment || null,
+            }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            console.error('Review submission error:', data);
+            const errMsg = typeof data === 'object'
+                ? (data.error || data.detail || Object.values(data)[0] || 'Submission failed')
+                : 'Submission failed';
+            throw new Error(Array.isArray(errMsg) ? errMsg[0] : errMsg);
+        }
+
+        // Update local appointment data so button switches to 'Reviewed ✓'
+        const idx = allAppointments.findIndex(a => a.id === _reviewApptId);
+        if (idx !== -1) allAppointments[idx].has_review = true;
+
+        closeReviewModal();
+        showToast('Review submitted! Thank you for your feedback. 🌟', 'success');
+        applyFilter(currentFilter);
+    } catch (err) {
+        console.error('Review submission error:', err);
+        showToast(err.message, 'error');
+        btn.disabled = false;
+        btn.innerHTML = `<i data-lucide="star" class="w-4 h-4"></i> Submit Review`;
+        lucide.createIcons();
+    }
+}
+
+// ─── Action: cancel / activate / complete ────────────────────────────────────
+async function doAction(id, action, event) {
+    event.stopPropagation();
+    if (action === 'write_prescription') {
+        window.location.href = `/prescriptions/?appointment_id=${id}`;
+        return;
+    }
+    if (action === 'reviewed') return; // already reviewed, no-op
+    if (action === 'leave_review') {
+        event.stopPropagation();
+        const appt = allAppointments.find(a => a.id === id);
+        if (appt) openReviewModal(appt.id, appt.vet.name, appt.vet.id, appt.vet.image);
+        return;
+    }
+
+    const btn = event.currentTarget;
+    const origHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i> ...`;
+    lucide.createIcons();
+
+    try {
+        const res = await authenticatedFetch(`/api/appointments/${id}/status/`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Action failed');
+
+        // Update local data
+        const idx = allAppointments.findIndex(a => a.id === id);
+        if (idx !== -1) allAppointments[idx] = data.appointment;
+
+        const labels = { activate:'started', cancel:'cancelled', complete:'completed' };
+        showToast(`Appointment ${labels[action] || action} successfully!`, 'success');
+        applyFilter(currentFilter);
+    } catch (err) {
+        showToast(err.message, 'error');
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+        lucide.createIcons();
+    }
+}
+
+// ─── Load ─────────────────────────────────────────────────────────────────────
+async function loadAppointments() {
+    try {
+        const userData = JSON.parse(localStorage.getItem('user') || '{}');
+        userRole = userData.role || 'PET_OWNER';
+
+        // Vets don't book appointments, hide the button
+        if (userRole === 'VETERINARIAN') {
+            document.getElementById('bookApptBtn').style.display = 'none';
+        }
+
+        const res = await authenticatedFetch('/api/appointments/');
+        if (!res.ok) throw new Error('Failed to load appointments');
+        allAppointments = await res.json();
+
+        document.getElementById('apptSkeleton').style.display = 'none';
+
+        // Check for filter query parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const initialFilter = urlParams.get('filter') || 'ALL';
+        applyFilter(initialFilter);
+    } catch (err) {
+        document.getElementById('apptSkeleton').innerHTML = `
+            <div class="empty-state">
+                <i data-lucide="wifi-off" class="w-10 h-10 mx-auto mb-3"></i>
+                <p class="font-semibold">Could not load appointments</p>
+                <p class="text-sm mt-1 text-gray-400">${err.message}</p>
+            </div>`;
+        lucide.createIcons();
+    }
+}
+
+// Filter button click
+document.getElementById('filterBtns').addEventListener('click', e => {
+    const btn = e.target.closest('.filter-btn');
+    if (btn) applyFilter(btn.dataset.filter);
+});
+
+loadAppointments();
+</script>
+{% endblock %}

@@ -1,0 +1,614 @@
+{% extends "layouts/base.html" %}
+{% block title %}Prescriptions - PetXpert{% endblock %}
+{% block page_title %}Prescriptions{% endblock %}
+{% block page_subtitle %}View and manage prescriptions for your pets{% endblock %}
+
+{% block extra_head %}
+<style>
+    .filter-btn {
+        padding: 6px 14px; border-radius: 9999px; font-size: 12px; font-weight: 700;
+        cursor: pointer; transition: all 0.15s; border: 1.5px solid #e7e7f3;
+        background: #fff; color: #737686;
+    }
+    .filter-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+    .presc-card {
+        background: #fff; border: 1px solid #e7e7f3; border-radius: 1rem;
+        overflow: hidden; transition: box-shadow 0.2s;
+    }
+    .presc-card:hover { box-shadow: 0 8px 24px rgba(0,63,177,0.07); }
+
+    .presc-card-header {
+        display: flex; align-items: center; gap: 1rem;
+        padding: 1.25rem; cursor: pointer; user-select: none;
+    }
+    .presc-card-body { border-top: 1px solid #f3f3fe; display: none; }
+    .presc-card-body.open { display: block; }
+
+    .status-pill { display:inline-flex; align-items:center; padding:3px 10px; border-radius:9999px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; }
+    .status-active    { background:#d1fae5; color:#065f46; }
+    .status-expired   { background:#fee2e2; color:#991b1b; }
+    .status-permanent { background:#e0e7ff; color:#3730a3; }
+
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 640px) { .detail-grid { grid-template-columns: 1fr; } }
+    .detail-block { background: #f8fafc; border-radius: 0.75rem; padding: 1rem; }
+    .detail-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 0.25rem; }
+    .detail-value { font-size: 14px; font-weight: 600; color: #191b23; }
+
+    .empty-state { text-align:center; padding: 4rem 2rem; color: #9ca3af; }
+    .skeleton { background: linear-gradient(90deg,#e7e7f3 25%,#f3f3fe 50%,#e7e7f3 75%); background-size:200% 100%; animation:shimmer 1.5s infinite; border-radius:1rem; }
+    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+    .chevron { transition: transform 0.2s; }
+    .chevron.open { transform: rotate(180deg); }
+
+    .med-table { width: 100%; border-collapse: collapse; text-align: left; }
+    .med-table th { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #9ca3af; padding: 0.5rem; border-bottom: 1.5px solid #f1f5f9; }
+    .med-table td { font-size: 13px; color: #334155; padding: 0.75rem 0.5rem; border-bottom: 1px solid #f1f5f9; }
+
+
+</style>
+{% endblock %}
+
+{% block content %}
+
+
+<!-- Header Controls -->
+<div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+    <div class="flex flex-wrap items-center gap-4">
+        <!-- Filters -->
+        <div class="flex gap-2" id="filterBtns">
+            <button class="filter-btn active" data-filter="ALL">All</button>
+            <button class="filter-btn" data-filter="ACTIVE">Active</button>
+            <button class="filter-btn" data-filter="EXPIRED">Expired</button>
+        </div>
+        <!-- Search -->
+        <div class="relative w-64">
+            <input type="text" id="searchInput" placeholder="Search by pet or medicine..." 
+                   class="w-full bg-white border border-gray-200 rounded-xl px-4 py-2 pl-9 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent transition-all">
+            <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-2.5"></i>
+        </div>
+    </div>
+    
+    <button id="writePrescBtn" onclick="openWritePrescModal()"
+            class="bg-[var(--primary)] text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-blue-800 transition-all shadow-md shadow-blue-100 hidden">
+        <i data-lucide="file-plus" class="w-4 h-4"></i> Write Prescription
+    </button>
+</div>
+
+<!-- Skeletons -->
+<div id="prescSkeleton" class="space-y-4">
+    <div class="skeleton h-20"></div>
+    <div class="skeleton h-20"></div>
+    <div class="skeleton h-20"></div>
+</div>
+
+<!-- Prescriptions List -->
+<div id="prescList" class="space-y-4 hidden"></div>
+
+<!-- Empty State -->
+<div id="prescEmpty" class="hidden empty-state">
+    <i data-lucide="file-text" class="w-12 h-12 mx-auto mb-3 text-gray-300"></i>
+    <p class="font-bold text-gray-500 text-lg">No prescriptions found</p>
+    <p class="text-sm text-gray-400 mt-1">There are no prescriptions matching your criteria.</p>
+</div>
+
+<!-- Write Prescription Modal (Vet Only) -->
+<div id="writePrescModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden items-center justify-center">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto m-4 flex flex-col">
+        <!-- Header -->
+        <div class="p-6 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white z-10">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center text-purple-600">
+                    <i data-lucide="file-text" class="w-4 h-4"></i>
+                </div>
+                <h2 class="text-xl font-bold text-gray-900 font-hanken">New Prescription</h2>
+            </div>
+            <button onclick="closeWritePrescModal()" class="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <!-- Form Body -->
+        <form id="writePrescForm" class="p-6 space-y-6 flex-1">
+            <!-- Appointment Select & Valid Until Date -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Select Appointment</label>
+                    <select id="appointmentSelect" required
+                            class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:bg-white transition-all">
+                        <option value="" disabled selected>Loading completed appointments...</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Valid Until (Optional)</label>
+                    <input type="date" id="validUntilInput"
+                           class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:bg-white transition-all">
+                </div>
+            </div>
+
+            <!-- Diagnosis Text -->
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Diagnosis / Medical Findings</label>
+                <textarea id="diagnosisInput" rows="3" required placeholder="Describe findings, diagnosis, and condition details..."
+                          class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:bg-white transition-all resize-none"></textarea>
+            </div>
+
+            <!-- Instructions Text -->
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">General Instructions / Advice</label>
+                <textarea id="instructionsInput" rows="3" required placeholder="Describe dietary restrictions, hygiene guidance, follow-up recommendations..."
+                          class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:bg-white transition-all resize-none"></textarea>
+            </div>
+
+            <!-- Medicines Section -->
+            <div class="border-t border-gray-100 pt-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-gray-900 text-sm flex items-center gap-2">
+                        <i data-lucide="pill" class="w-4 h-4 text-purple-600"></i>
+                        Prescribed Medications
+                    </h3>
+                    <button type="button" onclick="addMedicationRow()"
+                            class="text-[var(--primary)] hover:text-blue-800 text-xs font-bold flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors">
+                        <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Medicine
+                    </button>
+                </div>
+
+                <div id="medicationsContainer" class="space-y-4">
+                    <!-- Dynamic Rows Go Here -->
+                </div>
+            </div>
+
+            <!-- Submit Buttons -->
+            <div class="border-t border-gray-100 pt-6 flex justify-end gap-3">
+                <button type="button" onclick="closeWritePrescModal()"
+                        class="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors">
+                    Cancel
+                </button>
+                <button type="submit" id="submitPrescBtn"
+                        class="px-5 py-2.5 bg-[var(--primary)] text-white rounded-xl text-sm font-bold hover:bg-blue-800 transition-colors flex items-center gap-2 shadow-lg shadow-blue-100">
+                    Create Prescription
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const SPECIES_ICONS = { DOG:'🐕', CAT:'🐈', BIRD:'🦜', RABBIT:'🐇', FISH:'🐠', REPTILE:'🦎', OTHER:'🐾' };
+
+let allPrescriptions = [];
+let allAppointments = [];
+let currentFilter = 'ALL';
+let userRole = '';
+
+
+
+// Format Date helpers
+function fmtDate(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-PK', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+}
+function fmtDateShort(iso) {
+    if (!iso) return 'Permanent (No Expiry)';
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-PK', { month:'short', day:'numeric', year:'numeric' });
+}
+
+// Validity status helper
+function getValidity(validUntil) {
+    if (!validUntil) return { badge: '<span class="status-pill status-permanent">Permanent</span>', isExpired: false };
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const expiry = new Date(validUntil);
+    expiry.setHours(0, 0, 0, 0);
+    if (expiry < today) {
+        return { badge: '<span class="status-pill status-expired">Expired</span>', isExpired: true };
+    }
+    return { badge: '<span class="status-pill status-active">Active</span>', isExpired: false };
+}
+
+// Dynamic row adding for medications form
+function addMedicationRow(data = {}) {
+    const container = document.getElementById('medicationsContainer');
+    const rowId = 'med-row-' + Math.random().toString(36).substring(2, 9);
+    
+    const rowHtml = `
+        <div class="bg-gray-50 border border-gray-100 p-4 rounded-xl relative space-y-3" id="${rowId}">
+            <button type="button" onclick="removeMedicationRow('${rowId}')"
+                    class="absolute top-4 right-4 text-gray-400 hover:text-red-500 transition-colors">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div class="lg:col-span-2">
+                    <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Medicine Name</label>
+                    <input type="text" name="medicine_name" required placeholder="e.g. Amoxicillin, Meloxicam" value="${data.medicine_name || ''}"
+                           class="med-input w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-[var(--primary)] transition-all">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Dosage Instruction</label>
+                    <input type="text" name="dosage" required placeholder="e.g. 1 tab twice a day" value="${data.dosage || ''}"
+                           class="med-input w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-[var(--primary)] transition-all">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Qty</label>
+                        <input type="number" name="quantity" required min="1" placeholder="10" value="${data.quantity || ''}"
+                               class="med-input w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-[var(--primary)] transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Days</label>
+                        <input type="number" name="duration_days" required min="1" placeholder="7" value="${data.duration_days || ''}"
+                               class="med-input w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-[var(--primary)] transition-all">
+                    </div>
+                </div>
+            </div>
+            
+            <div>
+                <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Notes (Optional)</label>
+                <input type="text" name="notes" placeholder="Take after meal, store in a cool place..." value="${data.notes || ''}"
+                       class="med-input w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-[var(--primary)] transition-all">
+            </div>
+        </div>
+    `;
+    
+    container.insertAdjacentHTML('beforeend', rowHtml);
+    lucide.createIcons();
+}
+
+function removeMedicationRow(id) {
+    const row = document.getElementById(id);
+    if (row) {
+        row.remove();
+    }
+}
+
+// Open/Close Modal functions
+function openWritePrescModal() {
+    document.getElementById('writePrescModal').classList.remove('hidden');
+    document.getElementById('writePrescModal').classList.add('flex');
+    
+    // Clear form and set 1 row by default
+    document.getElementById('writePrescForm').reset();
+    document.getElementById('medicationsContainer').innerHTML = '';
+    addMedicationRow();
+    
+    loadCompletedAppointmentsSelect();
+}
+
+function closeWritePrescModal() {
+    document.getElementById('writePrescModal').classList.add('hidden');
+    document.getElementById('writePrescModal').classList.remove('flex');
+}
+
+// Fetch Completed Appointments to populate Vet's creation dropdown
+async function loadCompletedAppointmentsSelect() {
+    const select = document.getElementById('appointmentSelect');
+    select.innerHTML = '<option value="" disabled selected>Loading completed appointments...</option>';
+    
+    try {
+        const res = await authenticatedFetch('/api/appointments/');
+        if (!res.ok) throw new Error('Could not fetch appointments');
+        
+        allAppointments = await res.json();
+        
+        const usedAppointmentIds = new Set(allPrescriptions.map(p => p.appointment));
+        
+        const completedAppointments = allAppointments.filter(appt => 
+            appt.status === 'COMPLETED' && !usedAppointmentIds.has(appt.id)
+        );
+        
+        if (completedAppointments.length === 0) {
+            select.innerHTML = '<option value="" disabled selected>No completed appointments available for prescription</option>';
+            return;
+        }
+        
+        select.innerHTML = '<option value="" disabled selected>Choose a completed appointment...</option>';
+        completedAppointments.forEach(appt => {
+            const dateStr = new Date(appt.scheduled_at).toLocaleDateString('en-PK', { month:'short', day:'numeric', year:'numeric' });
+            select.innerHTML += `<option value="${appt.id}">Pet: ${appt.pet.name} · Owner: ${appt.owner.name} (${dateStr})</option>`;
+        });
+        
+        // If appointment_id is in query params, pre-select it
+        const urlParams = new URLSearchParams(window.location.search);
+        const queryApptId = urlParams.get('appointment_id');
+        if (queryApptId) {
+            select.value = queryApptId;
+        }
+    } catch (err) {
+        console.error(err);
+        select.innerHTML = '<option value="" disabled selected>Error loading appointments</option>';
+    }
+}
+
+// Toggle card expansion
+function toggleCard(id) {
+    const body = document.getElementById('body-' + id);
+    const chev = document.getElementById('chev-' + id);
+    body.classList.toggle('open');
+    chev.classList.toggle('open');
+    lucide.createIcons();
+}
+
+// Render list item HTML
+function renderPrescCard(presc) {
+    const petIcon = SPECIES_ICONS[presc.pet_species] || '🐾';
+    const validity = getValidity(presc.valid_until);
+    const dateStr = fmtDateShort(presc.issued_at);
+    
+    const prescriberInfo = userRole === 'VETERINARIAN'
+        ? `Pet Owner: ${presc.pet_name} (${presc.pet_species})`
+        : `Dr. ${presc.vet_name} · ${presc.vet_specialization || 'General Vet'}`;
+
+    // Table of meds
+    let medsRows = presc.items.map(m => `
+        <tr>
+            <td class="font-bold text-gray-800">${m.medicine_name}</td>
+            <td>${m.dosage}</td>
+            <td class="text-center font-semibold">${m.quantity}</td>
+            <td class="text-center font-semibold">${m.duration_days} days</td>
+            <td class="text-gray-500 italic">${m.notes || '—'}</td>
+        </tr>
+    `).join('');
+
+    if (presc.items.length === 0) {
+        medsRows = `<tr><td colspan="5" class="text-center text-gray-400 py-3">No medications listed</td></tr>`;
+    }
+
+    return `
+    <div class="presc-card" id="card-${presc.id}" data-expired="${validity.isExpired}">
+        <!-- Header -->
+        <div class="presc-card-header" onclick="toggleCard('${presc.id}')">
+            <div class="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center flex-shrink-0 text-purple-600">
+                <i data-lucide="pill" class="w-5 h-5"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="font-bold text-gray-900 text-sm">Prescription for ${petIcon} ${presc.pet_name}</p>
+                <p class="text-xs text-gray-500 truncate">${prescriberInfo} · Issued: ${dateStr}</p>
+            </div>
+            <div class="flex items-center gap-3 flex-shrink-0">
+                ${validity.badge}
+                <i data-lucide="chevron-down" class="w-4 h-4 text-gray-400 chevron" id="chev-${presc.id}"></i>
+            </div>
+        </div>
+
+        <!-- Expanded Body -->
+        <div class="presc-card-body" id="body-${presc.id}">
+            <div class="p-6 space-y-5">
+                <!-- Grid of general details -->
+                <div class="detail-grid">
+                    <div class="detail-block">
+                        <div class="detail-label">Pet Details</div>
+                        <div class="detail-value">${petIcon} ${presc.pet_name}</div>
+                        <div class="text-xs text-gray-400 mt-0.5">${presc.pet_species}${presc.pet_breed?' · '+presc.pet_breed:''}</div>
+                    </div>
+                    <div class="detail-block">
+                        <div class="detail-label">Validity</div>
+                        <div class="detail-value">${fmtDateShort(presc.valid_until)}</div>
+                        <div class="text-xs text-gray-400 mt-0.5">${validity.isExpired ? 'Status: Expired' : 'Status: Active'}</div>
+                    </div>
+                    <div class="detail-block" style="grid-column: 1 / -1">
+                        <div class="detail-label">Diagnosis / Findings</div>
+                        <div class="text-sm text-gray-700 whitespace-pre-line">${presc.diagnosis_text}</div>
+                    </div>
+                    <div class="detail-block" style="grid-column: 1 / -1">
+                        <div class="detail-label">Instructions / Advice</div>
+                        <div class="text-sm text-gray-700 whitespace-pre-line">${presc.instructions}</div>
+                    </div>
+                </div>
+
+                <!-- Medications Table -->
+                <div class="border border-gray-100 rounded-xl overflow-hidden bg-white p-1">
+                    <div class="p-3 bg-gray-50 border-b border-gray-100 font-bold text-xs text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                        <i data-lucide="activity" class="w-4 h-4 text-purple-600"></i> Prescribed Medicines
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="med-table">
+                            <thead>
+                                <tr>
+                                    <th>Medicine</th>
+                                    <th>Dosage</th>
+                                    <th class="text-center">Qty</th>
+                                    <th class="text-center">Duration</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${medsRows}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="flex justify-between items-center text-[10px] text-gray-400 border-t border-gray-100 pt-3">
+                    <div>Issued: ${fmtDate(presc.issued_at)}</div>
+                    <div>Prescription ID: ${presc.id}</div>
+                </div>
+            </div>
+        </div>
+    </div>`;
+}
+
+// Filter and Search logic
+function applyFilters() {
+    const searchVal = document.getElementById('searchInput').value.toLowerCase().trim();
+    
+    let filtered = allPrescriptions;
+
+    // Filter by tab status
+    if (currentFilter === 'ACTIVE') {
+        filtered = filtered.filter(p => !getValidity(p.valid_until).isExpired);
+    } else if (currentFilter === 'EXPIRED') {
+        filtered = filtered.filter(p => getValidity(p.valid_until).isExpired);
+    }
+
+    // Filter by search text (pet name, vet name, or medicine names)
+    if (searchVal) {
+        filtered = filtered.filter(p => {
+            const petMatch = p.pet_name.toLowerCase().includes(searchVal);
+            const vetMatch = p.vet_name.toLowerCase().includes(searchVal);
+            const diagnosisMatch = p.diagnosis_text.toLowerCase().includes(searchVal);
+            const medMatch = p.items.some(m => m.medicine_name.toLowerCase().includes(searchVal));
+            return petMatch || vetMatch || diagnosisMatch || medMatch;
+        });
+    }
+
+    const list = document.getElementById('prescList');
+    const empty = document.getElementById('prescEmpty');
+
+    if (filtered.length === 0) {
+        list.innerHTML = '';
+        list.classList.add('hidden');
+        empty.classList.remove('hidden');
+    } else {
+        list.innerHTML = filtered.map(renderPrescCard).join('');
+        list.classList.remove('hidden');
+        empty.classList.add('hidden');
+        lucide.createIcons();
+    }
+}
+
+// Load List data
+async function loadPrescriptions() {
+    try {
+        const userData = JSON.parse(localStorage.getItem('user') || '{}');
+        userRole = userData.role || 'PET_OWNER';
+
+        if (userRole === 'VETERINARIAN') {
+            document.getElementById('writePrescBtn').classList.remove('hidden');
+        }
+
+        const res = await authenticatedFetch('/api/prescriptions/');
+        if (!res.ok) throw new Error('Could not load prescriptions');
+        
+        allPrescriptions = await res.json();
+        
+        document.getElementById('prescSkeleton').classList.add('hidden');
+        applyFilters();
+        
+        // Handle redirect from appointments page (?appointment_id=xxx)
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('appointment_id')) {
+            openWritePrescModal();
+        }
+    } catch (err) {
+        document.getElementById('prescSkeleton').innerHTML = `
+            <div class="empty-state">
+                <i data-lucide="wifi-off" class="w-10 h-10 mx-auto mb-3"></i>
+                <p class="font-semibold">Could not load prescriptions</p>
+                <p class="text-sm mt-1 text-gray-400">${err.message}</p>
+            </div>`;
+        lucide.createIcons();
+    }
+}
+
+// Submit prescription form
+document.getElementById('writePrescForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const submitBtn = document.getElementById('submitPrescBtn');
+    const origHtml = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> Submitting...`;
+    lucide.createIcons();
+    
+    const appointment_id = document.getElementById('appointmentSelect').value;
+    const diagnosis_text = document.getElementById('diagnosisInput').value;
+    const instructions = document.getElementById('instructionsInput').value;
+    const valid_until_val = document.getElementById('validUntilInput').value;
+    const valid_until = valid_until_val || null;
+
+    // Collect medication rows
+    const medRows = document.querySelectorAll('#medicationsContainer > div');
+    const items = [];
+    
+    medRows.forEach(row => {
+        const medicine_name = row.querySelector('[name="medicine_name"]').value.trim();
+        const dosage = row.querySelector('[name="dosage"]').value.trim();
+        const quantity = parseInt(row.querySelector('[name="quantity"]').value);
+        const duration_days = parseInt(row.querySelector('[name="duration_days"]').value);
+        const notes = row.querySelector('[name="notes"]').value.trim();
+        
+        if (medicine_name && dosage && quantity > 0 && duration_days > 0) {
+            items.push({ medicine_name, dosage, quantity, duration_days, notes });
+        }
+    });
+
+    if (items.length === 0) {
+        showToast('Please prescribe at least one valid medication.', 'error');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = origHtml;
+        lucide.createIcons();
+        return;
+    }
+
+    const payload = {
+        appointment: appointment_id,
+        diagnosis_text,
+        instructions,
+        valid_until,
+        items
+    };
+
+    try {
+        const res = await authenticatedFetch('/api/prescriptions/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        
+        const data = await res.json();
+        
+        if (!res.ok) {
+            let errMsg = 'Failed to submit prescription.';
+            if (data.error) errMsg = data.error;
+            else if (typeof data === 'object') {
+                errMsg = Object.entries(data).map(([field, val]) => `${field}: ${val}`).join(' | ');
+            }
+            throw new Error(errMsg);
+        }
+        
+        showToast('Prescription issued successfully!', 'success');
+        
+        // Clean URL params if they exist so it doesn't reopen
+        if (window.location.search) {
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+        
+        closeWritePrescModal();
+        
+        // Reload listings
+        document.getElementById('prescSkeleton').classList.remove('hidden');
+        document.getElementById('prescList').classList.add('hidden');
+        loadPrescriptions();
+        
+    } catch (err) {
+        showToast(err.message, 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = origHtml;
+        lucide.createIcons();
+    }
+});
+
+// Setup listeners
+document.getElementById('filterBtns').addEventListener('click', e => {
+    const btn = e.target.closest('.filter-btn');
+    if (btn) {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFilter = btn.dataset.filter;
+        applyFilters();
+    }
+});
+
+document.getElementById('searchInput').addEventListener('input', applyFilters);
+
+// Initialize
+loadPrescriptions();
+</script>
+{% endblock %}
