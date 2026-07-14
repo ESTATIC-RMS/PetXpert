@@ -30,12 +30,37 @@
             background-color: white;
             box-shadow: 0 0 0 2px rgba(0, 63, 177, 0.1);
         }
+        .form-input.valid {
+            border-color: #22c55e;
+            background-color: #f0fdf4;
+        }
+        .form-input.invalid {
+            border-color: #ef4444;
+            background-color: #fef2f2;
+        }
         .form-label {
             display: block;
             font-size: 0.875rem;
             font-weight: 600;
             color: #374151;
             margin-bottom: 0.5rem;
+        }
+        .char-counter {
+            font-size: 0.75rem;
+            color: #9ca3af;
+            margin-top: 0.25rem;
+            text-align: right;
+        }
+        .char-counter.valid {
+            color: #22c55e;
+        }
+        .char-counter.invalid {
+            color: #ef4444;
+        }
+        .field-error {
+            font-size: 0.75rem;
+            color: #ef4444;
+            margin-top: 0.25rem;
         }
         @keyframes slide-in-right {
             0% { transform: translateX(120%); opacity: 0; }
@@ -70,21 +95,24 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label class="form-label">License Number *</label>
-                        <input type="text" id="license_number" required class="form-input" placeholder="e.g. VET-12345678">
+                        <input type="text" id="license_number" required class="form-input" placeholder="e.g. VET-12345678" maxlength="100">
+                        <div class="char-counter" id="license_number_counter">0/100</div>
                     </div>
                     <div>
                         <label class="form-label">Qualification *</label>
-                        <input type="text" id="qualification" required class="form-input" placeholder="e.g. DVM, PhD in Veterinary Medicine">
+                        <input type="text" id="qualification" required class="form-input" placeholder="e.g. DVM, PhD in Veterinary Medicine" maxlength="255">
+                        <div class="char-counter" id="qualification_counter">0/255</div>
                     </div>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label class="form-label">Specialization *</label>
-                        <input type="text" id="specialization" required class="form-input" placeholder="e.g. Feline Cardiology, Surgery">
+                        <input type="text" id="specialization" required class="form-input" placeholder="e.g. Feline Cardiology, Surgery" maxlength="255">
+                        <div class="char-counter" id="specialization_counter">0/255</div>
                     </div>
                     <div>
                         <label class="form-label">Years of Experience *</label>
-                        <input type="number" id="years_experience" required min="0" class="form-input" placeholder="e.g. 10">
+                        <input type="number" id="years_experience" required min="0" max="60" class="form-input" placeholder="e.g. 10">
                     </div>
                 </div>
             </div>
@@ -95,26 +123,36 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label class="form-label">Clinic Name *</label>
-                        <input type="text" id="clinic_name" required class="form-input" placeholder="e.g. City Pet Hospital">
+                        <input type="text" id="clinic_name" required class="form-input" placeholder="e.g. City Pet Hospital" maxlength="255">
+                        <div class="char-counter" id="clinic_name_counter">0/255</div>
                     </div>
                     <div>
                         <label class="form-label">Phone Number *</label>
-                        <input type="tel" id="phone_number" required class="form-input" placeholder="e.g. +1 (555) 000-0000">
+                        <input type="tel" id="phone_number" required class="form-input" placeholder="e.g. +1 (555) 000-0000" maxlength="20">
+                        <div class="char-counter" id="phone_number_counter">0/20</div>
                     </div>
                 </div>
                 <div>
                     <label class="form-label">Clinic Address *</label>
-                    <textarea id="clinic_address" rows="2" required class="form-input resize-none" placeholder="Full street address of your primary clinic..."></textarea>
+                    <textarea id="clinic_address" rows="2" required class="form-input resize-none" placeholder="Full street address of your primary clinic..." maxlength="2000"></textarea>
+                    <div class="char-counter" id="clinic_address_counter">0/2000</div>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <label class="form-label">Consultation Fee ($) *</label>
-                        <input type="number" id="consultation_fee" required min="0" step="0.01" class="form-input" placeholder="e.g. 75.00">
+                        <label class="form-label">Consultation Fee (PKR) *</label>
+                        <input type="number" id="consultation_fee" required min="1" max="1000000" step="1" class="form-input" placeholder="e.g. 2500">
                     </div>
                     <div>
                         <label class="form-label">City/Location *</label>
-                        <input type="text" id="location" required class="form-input" placeholder="e.g. New York, NY">
+                        <input type="text" id="location" required class="form-input" placeholder="e.g. New York, NY" maxlength="255">
+                        <div class="char-counter" id="location_counter">0/255</div>
                     </div>
+                </div>
+                <div>
+                    <label class="form-label">Account Number *</label>
+                    <input type="text" id="account_number" required class="form-input" placeholder="e.g. Bank account number for payments" maxlength="50">
+                    <div class="char-counter" id="account_number_counter">0/50</div>
+                    <p class="text-xs text-gray-400 mt-1">Your bank account number for receiving consultation payments</p>
                 </div>
             </div>
 
@@ -123,7 +161,8 @@
                 <h3 class="text-lg font-bold text-[var(--primary)] border-b border-blue-50 pb-2">Professional Bio</h3>
                 <div>
                     <label class="form-label">Bio (Clinical Summary) *</label>
-                    <textarea id="bio" rows="4" required class="form-input resize-none" placeholder="Provide a detailed professional summary for pet owners..."></textarea>
+                    <textarea id="bio" rows="4" required minlength="20" maxlength="1000" class="form-input resize-none" placeholder="Provide a detailed professional summary for pet owners (at least 20 characters)..."></textarea>
+                    <div class="char-counter" id="bio_counter">0/1000</div>
                 </div>
             </div>
 
@@ -137,7 +176,7 @@
                     <div class="flex-1">
                         <h4 class="font-bold text-gray-900">Profile Photo *</h4>
                         <p class="text-xs text-gray-500 mb-2">A professional photo is required for clinical verification.</p>
-                        <input type="file" id="profile_image" accept="image/*" required class="text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200">
+                        <input type="file" id="profile_image" accept="image/jpeg,image/png,image/webp,image/gif" class="text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200">
                     </div>
                 </div>
             </div>
@@ -161,6 +200,8 @@
         }
 
         // Check if profile is already complete
+        let existingProfileImage = false;
+
         async function checkProfileCompleteness() {
             try {
                 const response = await fetch('/api/profile/vet/update/', {
@@ -171,8 +212,12 @@
                 });
                 if (response.ok) {
                     const profile = await response.json();
-                    if (profile.license_number && profile.qualification && profile.specialization && profile.clinic_name && profile.profile_image) {
-                        window.location.href = '/veterinarians/';
+                    existingProfileImage = Boolean(profile.profile_image);
+                    if (profile.is_profile_complete) {
+                        const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+                        storedUser.is_profile_complete = true;
+                        localStorage.setItem('user', JSON.stringify(storedUser));
+                        window.location.href = '/appointments/';
                     }
                 }
             } catch (error) {
@@ -180,6 +225,230 @@
             }
         }
         checkProfileCompleteness();
+
+        const PHONE_REGEX = /^[\+]?[\d\s\-\(\)]{7,20}$/;
+        const LICENSE_REGEX = /^[A-Za-z0-9\-\/]{4,50}$/;
+
+        function clearFieldErrors() {
+            document.querySelectorAll('.field-error').forEach((el) => el.remove());
+            document.querySelectorAll('.form-input').forEach((el) => el.classList.remove('border-red-300', 'invalid'));
+        }
+
+        function showFieldError(fieldId, message) {
+            const field = document.getElementById(fieldId);
+            if (!field) return;
+            field.classList.remove('valid');
+            field.classList.add('invalid');
+            const error = document.createElement('p');
+            error.className = 'field-error text-xs text-red-600 mt-1';
+            error.textContent = message;
+            field.insertAdjacentElement('afterend', error);
+        }
+
+        function setFieldValid(fieldId) {
+            const field = document.getElementById(fieldId);
+            if (!field) return;
+            field.classList.remove('invalid');
+            field.classList.add('valid');
+            const existingError = field.nextElementSibling;
+            if (existingError && existingError.classList.contains('field-error')) {
+                existingError.remove();
+            }
+        }
+
+        function updateCharCounter(fieldId, maxLength, currentLength) {
+            const counter = document.getElementById(fieldId + '_counter');
+            if (!counter) return;
+            counter.textContent = `${currentLength}/${maxLength}`;
+            counter.classList.remove('valid', 'invalid');
+            if (currentLength >= maxLength) {
+                counter.classList.add('invalid');
+            } else if (currentLength > 0) {
+                counter.classList.add('valid');
+            }
+        }
+
+        function validateField(fieldId) {
+            const field = document.getElementById(fieldId);
+            if (!field) return true;
+            const value = field.value.trim();
+            let isValid = true;
+
+            switch(fieldId) {
+                case 'license_number':
+                    if (!value || !LICENSE_REGEX.test(value)) {
+                        isValid = false;
+                    }
+                    break;
+                case 'qualification':
+                    if (value.length < 2) {
+                        isValid = false;
+                    }
+                    break;
+                case 'specialization':
+                    if (value.length < 2) {
+                        isValid = false;
+                    }
+                    break;
+                case 'years_experience':
+                    const years = parseInt(value, 10);
+                    if (Number.isNaN(years) || years < 0 || years > 60) {
+                        isValid = false;
+                    }
+                    break;
+                case 'clinic_name':
+                    if (value.length < 2) {
+                        isValid = false;
+                    }
+                    break;
+                case 'phone_number':
+                    if (!PHONE_REGEX.test(value)) {
+                        isValid = false;
+                    }
+                    break;
+                case 'clinic_address':
+                    if (value.length < 10) {
+                        isValid = false;
+                    }
+                    break;
+                case 'consultation_fee':
+                    const fee = parseFloat(value);
+                    if (Number.isNaN(fee) || fee <= 0 || fee > 1000000) {
+                        isValid = false;
+                    }
+                    break;
+                case 'location':
+                    if (value.length < 2) {
+                        isValid = false;
+                    }
+                    break;
+                case 'account_number':
+                    if (value.length < 5) {
+                        isValid = false;
+                    }
+                    break;
+                case 'bio':
+                    if (value.length < 20) {
+                        isValid = false;
+                    }
+                    break;
+            }
+
+            if (isValid && value.length > 0) {
+                setFieldValid(fieldId);
+            } else if (value.length > 0) {
+                const errorMessages = {
+                    license_number: 'Enter a valid license number (4-50 letters, numbers, hyphens, or slashes).',
+                    qualification: 'Qualification must be at least 2 characters.',
+                    specialization: 'Specialization must be at least 2 characters.',
+                    years_experience: 'Enter years of experience between 0 and 60.',
+                    clinic_name: 'Clinic name must be at least 2 characters.',
+                    phone_number: 'Enter a valid phone number.',
+                    clinic_address: 'Clinic address must be at least 10 characters.',
+                    consultation_fee: 'Consultation fee must be greater than 0.',
+                    location: 'City/location must be at least 2 characters.',
+                    account_number: 'Account number must be at least 5 characters.',
+                    bio: 'Bio must be at least 20 characters.'
+                };
+                showFieldError(fieldId, errorMessages[fieldId] || 'Invalid input.');
+            } else {
+                field.classList.remove('valid', 'invalid');
+                const existingError = field.nextElementSibling;
+                if (existingError && existingError.classList.contains('field-error')) {
+                    existingError.remove();
+                }
+            }
+
+            return isValid;
+        }
+
+        function validateVetProfileForm() {
+            clearFieldErrors();
+            let valid = true;
+
+            const license = document.getElementById('license_number').value.trim();
+            if (!license || !LICENSE_REGEX.test(license)) {
+                showFieldError('license_number', 'Enter a valid license number (4-50 letters, numbers, hyphens, or slashes).');
+                valid = false;
+            }
+
+            const qualification = document.getElementById('qualification').value.trim();
+            if (qualification.length < 2) {
+                showFieldError('qualification', 'Qualification is required.');
+                valid = false;
+            }
+
+            const specialization = document.getElementById('specialization').value.trim();
+            if (specialization.length < 2) {
+                showFieldError('specialization', 'Specialization is required.');
+                valid = false;
+            }
+
+            const years = parseInt(document.getElementById('years_experience').value, 10);
+            if (Number.isNaN(years) || years < 0 || years > 60) {
+                showFieldError('years_experience', 'Enter years of experience between 0 and 60.');
+                valid = false;
+            }
+
+            const clinicName = document.getElementById('clinic_name').value.trim();
+            if (clinicName.length < 2) {
+                showFieldError('clinic_name', 'Clinic name is required.');
+                valid = false;
+            }
+
+            const phone = document.getElementById('phone_number').value.trim();
+            if (!PHONE_REGEX.test(phone)) {
+                showFieldError('phone_number', 'Enter a valid phone number.');
+                valid = false;
+            }
+
+            const clinicAddress = document.getElementById('clinic_address').value.trim();
+            if (clinicAddress.length < 10) {
+                showFieldError('clinic_address', 'Clinic address must be at least 10 characters.');
+                valid = false;
+            }
+
+            const fee = parseFloat(document.getElementById('consultation_fee').value);
+            if (Number.isNaN(fee) || fee <= 0) {
+                showFieldError('consultation_fee', 'Consultation fee must be greater than 0.');
+                valid = false;
+            }
+
+            const location = document.getElementById('location').value.trim();
+            if (location.length < 2) {
+                showFieldError('location', 'City/location is required.');
+                valid = false;
+            }
+
+            const accountNumber = document.getElementById('account_number').value.trim();
+            if (accountNumber.length < 5) {
+                showFieldError('account_number', 'Account number must be at least 5 characters.');
+                valid = false;
+            }
+
+            const bio = document.getElementById('bio').value.trim();
+            if (bio.length < 20) {
+                showFieldError('bio', 'Bio must be at least 20 characters.');
+                valid = false;
+            }
+
+            const imageFile = document.getElementById('profile_image').files[0];
+            if (!imageFile && !existingProfileImage) {
+                showFieldError('profile_image', 'Profile photo is required.');
+                valid = false;
+            } else if (imageFile) {
+                if (imageFile.size > 5 * 1024 * 1024) {
+                    showFieldError('profile_image', 'Profile photo must be smaller than 5 MB.');
+                    valid = false;
+                }
+                if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(imageFile.type)) {
+                    showFieldError('profile_image', 'Profile photo must be JPEG, PNG, WebP, or GIF.');
+                    valid = false;
+                }
+            }
+
+            return valid;
+        }
 
         // Image preview
         document.getElementById('profile_image').addEventListener('change', function(e) {
@@ -195,8 +464,50 @@
             }
         });
 
+        // Real-time validation and character counters
+        const textFields = [
+            { id: 'license_number', max: 100 },
+            { id: 'qualification', max: 255 },
+            { id: 'specialization', max: 255 },
+            { id: 'clinic_name', max: 255 },
+            { id: 'phone_number', max: 20 },
+            { id: 'clinic_address', max: 2000 },
+            { id: 'location', max: 255 },
+            { id: 'account_number', max: 50 },
+            { id: 'bio', max: 1000 }
+        ];
+
+        textFields.forEach(field => {
+            const element = document.getElementById(field.id);
+            if (element) {
+                element.addEventListener('input', function() {
+                    updateCharCounter(field.id, field.max, this.value.length);
+                    validateField(field.id);
+                });
+                element.addEventListener('blur', function() {
+                    validateField(field.id);
+                });
+            }
+        });
+
+        // Numeric fields validation
+        const numericFields = ['years_experience', 'consultation_fee'];
+        numericFields.forEach(fieldId => {
+            const element = document.getElementById(fieldId);
+            if (element) {
+                element.addEventListener('input', function() {
+                    validateField(fieldId);
+                });
+                element.addEventListener('blur', function() {
+                    validateField(fieldId);
+                });
+            }
+        });
+
         // Local Toast Notification System
         function showToast(message, type = 'success', duration = 4000) {
+            // Ensure minimum duration of 3 seconds
+            if (duration < 3000) duration = 3000;
             const container = document.getElementById('toast-container');
             if (!container) return;
 
@@ -253,22 +564,28 @@
 
         document.getElementById('vetProfileForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+            if (!validateVetProfileForm()) {
+                showToast('Please fix the highlighted fields.', 'error');
+                return;
+            }
+
             const submitBtn = document.getElementById('submitBtn');
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> Processing...';
             lucide.createIcons();
 
             const formData = new FormData();
-            formData.append('license_number', document.getElementById('license_number').value);
-            formData.append('qualification', document.getElementById('qualification').value);
-            formData.append('specialization', document.getElementById('specialization').value);
-            formData.append('years_experience', document.getElementById('years_experience').value);
-            formData.append('clinic_name', document.getElementById('clinic_name').value);
-            formData.append('phone_number', document.getElementById('phone_number').value);
-            formData.append('clinic_address', document.getElementById('clinic_address').value);
-            formData.append('consultation_fee', document.getElementById('consultation_fee').value);
-            formData.append('location', document.getElementById('location').value);
-            formData.append('bio', document.getElementById('bio').value);
+            formData.append('license_number', document.getElementById('license_number').value.trim());
+            formData.append('qualification', document.getElementById('qualification').value.trim());
+            formData.append('specialization', document.getElementById('specialization').value.trim());
+            formData.append('years_experience', document.getElementById('years_experience').value.trim());
+            formData.append('clinic_name', document.getElementById('clinic_name').value.trim());
+            formData.append('phone_number', document.getElementById('phone_number').value.trim());
+            formData.append('clinic_address', document.getElementById('clinic_address').value.trim());
+            formData.append('consultation_fee', document.getElementById('consultation_fee').value.trim());
+            formData.append('location', document.getElementById('location').value.trim());
+            formData.append('bio', document.getElementById('bio').value.trim());
+            formData.append('account_number', document.getElementById('account_number').value.trim());
             
             const imageFile = document.getElementById('profile_image').files[0];
             if (imageFile) {
@@ -276,7 +593,7 @@
             }
 
             try {
-                const response = await fetch('/api/profile/vet/update/', {
+                const response = await fetch('/api/profile/vet/update/?complete=true', {
                     method: 'PUT',
                     headers: {
                         'Authorization': `Bearer ${token}`
@@ -284,17 +601,30 @@
                     body: formData
                 });
 
+                const result = await response.json();
+
                 if (response.ok) {
+                    const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+                    storedUser.is_profile_complete = true;
+                    localStorage.setItem('user', JSON.stringify(storedUser));
                     showToast('Profile submitted successfully! Redirecting...', 'success');
                     setTimeout(() => {
-                        window.location.href = '/veterinarians/'; // Redirect to veterinarian services page
+                        window.location.href = '/appointments/';
                     }, 1500);
                 } else {
-                    const result = await response.json();
+                    clearFieldErrors();
                     let errorMsg = 'Failed to update profile.';
-                    if (result.license_number) errorMsg = 'License number already exists or is invalid.';
-                    else if (typeof result === 'object') errorMsg = Object.values(result).flat().join(' ');
-                    
+                    if (typeof result === 'object') {
+                        const messages = [];
+                        Object.entries(result).forEach(([field, value]) => {
+                            const text = Array.isArray(value) ? value[0] : value;
+                            messages.push(text);
+                            if (document.getElementById(field)) {
+                                showFieldError(field, text);
+                            }
+                        });
+                        if (messages.length) errorMsg = messages.join(' ');
+                    }
                     showToast(errorMsg, 'error');
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = '<span>Submit for Verification</span><i data-lucide="shield-check" class="w-5 h-5"></i>';

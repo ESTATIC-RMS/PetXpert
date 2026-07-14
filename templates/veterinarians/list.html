@@ -99,7 +99,7 @@
         <div class="flex justify-between items-center mb-6">
             <div>
                 <h2 class="text-2xl font-bold text-gray-900 font-hanken">Available Specialists</h2>
-                <p id="specialistsSubtitle" class="text-sm text-gray-500 mt-1">Showing <span id="filteredCount">0</span> veterinary experts in your area matching your criteria.</p>
+                <p id="specialistsSubtitle" class="text-sm text-gray-500 mt-1">Showing <span id="filteredRange">0</span> veterinary experts in your area matching your criteria.</p>
             </div>
             <div class="flex items-center gap-2">
                 <span class="text-xs font-bold text-gray-500">Sort by:</span>
@@ -121,6 +121,9 @@
                 </div>
             </div>
         </div>
+
+        <!-- Pagination -->
+        <div id="vetPagination" class="flex justify-center gap-2 mt-6"></div>
     </div>
 </div>
 {% endblock %}
@@ -128,6 +131,9 @@
 {% block extra_js %}
 <script>
     let allVets = [];
+    let currentPage = 1;
+    let pageSize = 6;
+    let filteredVets = [];
 
     async function loadVets() {
         const vetsGrid = document.getElementById('vetsGrid');
@@ -139,7 +145,6 @@
         const avgRatingSkeleton = document.getElementById('avgRatingSkeleton');
         const totalSpecialtiesEl = document.getElementById('totalSpecialties');
         const totalSpecialtiesSkeleton = document.getElementById('totalSpecialtiesSkeleton');
-        const filteredCountEl = document.getElementById('filteredCount');
         
         // Show loading skeletons
         totalVetsEl.classList.add('hidden');
@@ -231,7 +236,8 @@
         const locationFilter = document.getElementById('locationFilter').value.toLowerCase();
         const sortBy = document.getElementById('sortBy').value;
         
-        let filteredVets = [...allVets];
+        filteredVets = [...allVets];
+        currentPage = 1;
         
         // Apply specialty filter
         if (specialtyFilter) {
@@ -271,10 +277,19 @@
                 filteredVets.sort((a, b) => (b.avg_rating * b.total_consultations) - (a.avg_rating * a.total_consultations));
         }
         
-        // Update count
-        document.getElementById('filteredCount').innerText = filteredVets.length;
+        // Update count and paginated range
+        const total = filteredVets.length;
+        const totalPages = Math.max(1, Math.ceil(total / pageSize));
+        if (currentPage > totalPages) currentPage = totalPages;
+        const startIndex = total ? (currentPage - 1) * pageSize + 1 : 0;
+        const endIndex = Math.min(currentPage * pageSize, total);
+        const rangeEl = document.getElementById('filteredRange');
+        if (rangeEl) {
+            rangeEl.innerText = total ? `${startIndex}–${endIndex} of ${total}` : '0';
+        }
         
         renderVets(filteredVets);
+        renderPagination();
     }
 
     function renderVets(vets) {
@@ -291,11 +306,19 @@
                     <p class="text-sm text-gray-500 mt-1">Try adjusting your filters to see more results.</p>
                 </div>
             `;
+            document.getElementById('vetPagination').innerHTML = '';
             return;
         }
+
+        // Calculate pagination
+        const totalPages = Math.ceil(vets.length / pageSize);
+        if (currentPage > totalPages) currentPage = totalPages;
+        const startIndex = (currentPage - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
+        const pageVets = vets.slice(startIndex, endIndex);
         
         try {
-            vetsGrid.innerHTML = vets.map(vet => {
+            vetsGrid.innerHTML = pageVets.map(vet => {
                 console.log('Rendering vet:', vet);
                 const avatar = vet.profile_image || `https://ui-avatars.com/api/?name=${encodeURIComponent(vet.user.full_name)}&background=003fb1&color=fff&size=400`;
                 const isVerified = vet.status === 'VERIFIED';
@@ -352,21 +375,39 @@
                         </div>
                     </div>
                 `;
-            }).join('') + `
-                <div class="bg-gradient-to-br from-blue-50 to-purple-50 p-6 rounded-2xl border border-blue-100 flex flex-col items-center justify-center text-center">
-                    <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center mb-4 shadow-sm">
-                        <i data-lucide="sparkles" class="w-8 h-8 text-[var(--primary)]"></i>
-                    </div>
-                    <h4 class="text-lg font-bold text-gray-900 font-hanken mb-2">More Results Coming</h4>
-                    <p class="text-sm text-gray-600">Additional specialists being calibrated by Clinical Heart AI...</p>
-                </div>
-            `;
+            }).join('');
         } catch (error) {
             console.error('Error rendering vets:', error);
             vetsGrid.innerHTML = `<p class="text-center text-red-500 p-8 bg-white rounded-2xl border border-red-100 col-span-full">Error rendering veterinarians: ${error.message}</p>`;
             return;
         }
         
+        lucide.createIcons();
+    }
+
+    function renderPagination() {
+        const paginationEl = document.getElementById('vetPagination');
+        const totalPages = Math.ceil(filteredVets.length / pageSize);
+        
+        if (totalPages <= 1) {
+            paginationEl.innerHTML = '';
+            return;
+        }
+
+        let html = '';
+        
+        // Previous button
+        html += `<button onclick="currentPage = Math.max(1, currentPage - 1); renderVets(filteredVets); renderPagination(); window.scrollTo({top: 0, behavior: 'smooth'});" ${currentPage === 1 ? 'disabled' : ''} class="w-9 h-9 rounded-lg font-bold text-sm transition-all bg-white border border-gray-200 text-gray-600 hover:border-[var(--primary)] disabled:opacity-50 disabled:cursor-not-allowed"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>`;
+        
+        // Page numbers
+        for (let i = 1; i <= totalPages; i++) {
+            html += `<button onclick="currentPage = ${i}; renderVets(filteredVets); renderPagination(); window.scrollTo({top: 0, behavior: 'smooth'});" class="w-9 h-9 rounded-lg font-bold text-sm transition-all ${i === currentPage ? 'bg-[var(--primary)] text-white' : 'bg-white border border-gray-200 text-gray-600 hover:border-[var(--primary)]'}">${i}</button>`;
+        }
+        
+        // Next button
+        html += `<button onclick="currentPage = Math.min(${totalPages}, currentPage + 1); renderVets(filteredVets); renderPagination(); window.scrollTo({top: 0, behavior: 'smooth'});" ${currentPage === totalPages ? 'disabled' : ''} class="w-9 h-9 rounded-lg font-bold text-sm transition-all bg-white border border-gray-200 text-gray-600 hover:border-[var(--primary)] disabled:opacity-50 disabled:cursor-not-allowed"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>`;
+        
+        paginationEl.innerHTML = html;
         lucide.createIcons();
     }
 

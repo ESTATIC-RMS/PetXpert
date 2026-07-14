@@ -228,13 +228,20 @@ class DiagnosisMLEngine:
             else:
                 message = 'Diagnosis completed successfully.'
 
+            # A confident "Healthy" match scores high similarity, but that means the
+            # pet is fine — it should always read as a LOW (green) risk, never HIGH.
+            if disease_name == 'Healthy':
+                severity = 'LOW'
+            else:
+                severity = self._severity_for_similarity(similarity)
+
             return {
                 'success': True,
                 'is_dog': True,
                 'disease': disease_name,
                 'similarity': round(similarity, 4),
                 'threshold': round(self.threshold, 4),
-                'severity': self._severity_for_similarity(similarity),
+                'severity': severity,
                 'risk_score': min(max(similarity, 0.0), 1.0),
                 'predicted_diseases': predictions,
                 'message': message,

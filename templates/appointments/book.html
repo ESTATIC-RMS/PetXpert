@@ -414,6 +414,20 @@
     let selectedDuration = null;
     let consultationFee = parseFloat('{{ veterinarian.consultation_fee }}');
 
+    // Format a Date object as YYYY-MM-DD using LOCAL parts (no UTC conversion).
+    function formatLocalDate(d) {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    // Parse a YYYY-MM-DD string into a local Date (avoids UTC midnight shift).
+    function parseLocalDate(dateStr) {
+        const [year, month, day] = dateStr.split('-').map(Number);
+        return new Date(year, month - 1, day);
+    }
+
     // Initialize
     document.addEventListener('DOMContentLoaded', function () {
         loadPets();
@@ -582,8 +596,10 @@
             if (isPast) {
                 html += `<div class="text-center py-2 text-gray-300">${day}</div>`;
             } else {
+                // Build the date key from LOCAL parts. Using toISOString() here would
+                // convert to UTC and roll back a day for east-of-UTC timezones.
                 html += `
-                    <button onclick="selectDate('${date.toISOString().split('T')[0]}', this)" 
+                    <button onclick="selectDate('${formatLocalDate(date)}', this)" 
                             class="calendar-day text-center py-2 rounded-lg hover:bg-blue-100 transition-colors ${isToday ? 'bg-blue-600 text-white hover:bg-blue-700' : ''}">
                         ${day}
                     </button>
@@ -636,13 +652,20 @@
 
             const slots = await response.json();
 
-            container.innerHTML = slots.map(slot => `
+            container.innerHTML = slots.map(slot => {
+                if (slot.available) {
+                    return `
                 <button onclick="selectTime('${slot.time}', '${slot.display}', this)"
-                        class="time-slot p-3 border-2 rounded-xl font-medium transition-all ${slot.available ? 'border-gray-200 hover:border-blue-500 text-gray-900' : 'border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed'}"
-                        ${!slot.available ? 'disabled' : ''}>
+                        class="time-slot p-3 border-2 rounded-xl font-medium transition-all border-gray-200 hover:border-blue-500 text-gray-900">
                     ${slot.display}
-                </button>
-            `).join('');
+                </button>`;
+                }
+                return `
+                <button class="time-slot p-3 border-2 rounded-xl font-medium border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed relative" disabled title="This slot is already booked">
+                    <span class="line-through">${slot.display}</span>
+                    <span class="block text-[10px] font-bold text-red-400 mt-0.5">Booked</span>
+                </button>`;
+            }).join('');
 
         } catch (error) {
             container.innerHTML = '<div class="col-span-full text-center p-8 text-red-500">Failed to load time slots</div>';
@@ -744,7 +767,7 @@
             document.getElementById('summaryPet').textContent = petCard.querySelector('h4').textContent;
         }
 
-        document.getElementById('summaryDate').textContent = selectedDate ? new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '-';
+        document.getElementById('summaryDate').textContent = selectedDate ? parseLocalDate(selectedDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '-';
         document.getElementById('summaryTime').textContent = selectedTime ? selectedTime.display : '-';
         document.getElementById('summaryDuration').textContent = selectedDuration ? '1 Hour' : '-';
 
@@ -770,12 +793,10 @@
                 headers['Authorization'] = `Bearer ${token}`;
             }
 
-            // Prepare appointment data
-            // Create datetime in local timezone and format as ISO string
-            const [hours, minutes] = selectedTime.time.split(':');
-            const dateObj = new Date(selectedDate);
-            dateObj.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-            const scheduledAt = dateObj.toISOString();
+            // Send a naive local datetime string (no 'Z'/UTC offset). The backend
+            // is configured for Asia/Karachi and will interpret it in that timezone,
+            // so the stored time matches exactly what the user picked.
+            const scheduledAt = `${selectedDate}T${selectedTime.time}:00`;
             const reason = document.getElementById('visitReason').value;
 
             const appointmentData = {

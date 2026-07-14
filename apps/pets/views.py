@@ -7,11 +7,12 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from .models import Pet
 from .serializers import PetSerializer
+from apps.core.permissions import IsPetOwner
 
 
 @method_decorator(csrf_exempt, name='dispatch')
 class PetListCreateView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsPetOwner]
     parser_classes = (MultiPartParser, FormParser, JSONParser)
 
     def get(self, request):
@@ -41,7 +42,7 @@ class PetListCreateView(APIView):
 
 @method_decorator(csrf_exempt, name='dispatch')
 class PetDetailView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsPetOwner]
     parser_classes = (MultiPartParser, FormParser, JSONParser)
 
     def get(self, request, pet_id):

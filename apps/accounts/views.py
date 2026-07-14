@@ -9,8 +9,14 @@ from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import render, get_object_or_404
 from django.conf import settings
 from django.db.models import Avg, Count
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
 from .models import User, UserRole, VeterinarianProfile, VeterinarianReview, SellerProfile
-from .serializers import UserSerializer, VeterinarianProfileSerializer, VeterinarianReviewSerializer
+from .serializers import UserSerializer, VeterinarianProfileSerializer, VeterinarianProfileCompletionSerializer, VeterinarianReviewSerializer
+from apps.core.permissions import IsPetOwner, IsVeterinarian, IsPetOwnerOrVeterinarian, IsCommunityMember
 
 
 def _recalculate_vet_rating(veterinarian):
@@ -53,15 +59,15 @@ class SignupView(APIView):
             SellerProfile.objects.create(user=user, store_name=store_name)
 
         refresh = RefreshToken.for_user(user)
+
+        user_payload = UserSerializer(user, context={'request': request}).data
+        if role == UserRole.VETERINARIAN:
+            user_payload['is_profile_complete'] = False
         
         return Response({
             'refresh': str(refresh),
             'access': str(refresh.access_token),
-            'user': {
-                'email': user.email,
-                'full_name': user.full_name,
-                'role': user.role
-            }
+            'user': user_payload,
         }, status=status.HTTP_201_CREATED)
 
 from django.contrib.auth import authenticate
@@ -84,27 +90,17 @@ class SigninView(APIView):
             is_profile_complete = False
             if user.role == UserRole.VETERINARIAN:
                 try:
-                    profile = user.vet_profile
-                    # Check if key fields are filled
-                    is_profile_complete = all([
-                        profile.license_number,
-                        profile.qualification,
-                        profile.specialization,
-                        profile.clinic_name,
-                        profile.profile_image
-                    ])
+                    is_profile_complete = user.vet_profile.is_profile_complete()
                 except VeterinarianProfile.DoesNotExist:
                     is_profile_complete = False
+
+            user_payload = UserSerializer(user, context={'request': request}).data
+            user_payload['is_profile_complete'] = is_profile_complete
 
             return Response({
                 'refresh': str(refresh),
                 'access': str(refresh.access_token),
-                'user': {
-                    'email': user.email,
-                    'full_name': user.full_name,
-                    'role': user.role,
-                    'is_profile_complete': is_profile_complete
-                }
+                'user': user_payload,
             })
         else:
             return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
@@ -123,7 +119,7 @@ class ProfileImageUploadView(APIView):
         user.avatar = request.FILES['avatar']
         user.save()
         
-        serializer = UserSerializer(user)
+        serializer = UserSerializer(user, context={'request': request})
         return Response({
             'message': 'Profile image updated successfully',
             'user': serializer.data
@@ -149,14 +145,17 @@ class UserProfileView(APIView):
 
     def get(self, request):
         user = request.user
-        serializer = UserSerializer(user)
+        serializer = UserSerializer(user, context={'request': request})
         data = serializer.data
         
         # Add profile image for veterinarians
         if user.role == UserRole.VETERINARIAN:
             try:
                 vet_profile = user.vet_profile
-                data['profile_image'] = vet_profile.profile_image.url if vet_profile.profile_image else None
+                if vet_profile.profile_image:
+                    data['profile_image'] = request.build_absolute_uri(vet_profile.profile_image.url)
+                else:
+                    data['profile_image'] = None
             except VeterinarianProfile.DoesNotExist:
                 data['profile_image'] = None
         
@@ -164,7 +163,7 @@ class UserProfileView(APIView):
 
     def put(self, request):
         user = request.user
-        serializer = UserSerializer(user, data=request.data, partial=True)
+        serializer = UserSerializer(user, data=request.data, partial=True, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -172,7 +171,7 @@ class UserProfileView(APIView):
 
 @method_decorator(csrf_exempt, name='dispatch')
 class VeterinarianProfileImageUploadView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsVeterinarian]
 
     def post(self, request):
         user = request.user
@@ -195,7 +194,7 @@ class VeterinarianProfileImageUploadView(APIView):
 
 @method_decorator(csrf_exempt, name='dispatch')
 class VeterinarianProfileImageDeleteView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsVeterinarian]
 
     def delete(self, request):
         user = request.user
@@ -215,7 +214,7 @@ class VeterinarianProfileImageDeleteView(APIView):
 
 @method_decorator(csrf_exempt, name='dispatch')
 class VeterinarianProfileUpdateView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsVeterinarian]
     parser_classes = (MultiPartParser, FormParser, JSONParser)
 
     def get(self, request):
@@ -240,15 +239,22 @@ class VeterinarianProfileUpdateView(APIView):
             profile = user.vet_profile
         except VeterinarianProfile.DoesNotExist:
             profile = VeterinarianProfile.objects.create(user=user)
-            
-        serializer = VeterinarianProfileSerializer(profile, data=request.data, partial=True)
+
+        complete_mode = request.query_params.get('complete', '').lower() in ('1', 'true', 'yes')
+        if complete_mode or not profile.is_profile_complete():
+            serializer = VeterinarianProfileCompletionSerializer(profile, data=request.data, partial=False)
+        else:
+            serializer = VeterinarianProfileSerializer(profile, data=request.data, partial=True)
+
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data)
+            profile.refresh_from_db()
+            response_serializer = VeterinarianProfileSerializer(profile)
+            return Response(response_serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class VeterinarianListView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsPetOwnerOrVeterinarian]
 
     def get(self, request):
         # Only list verified veterinarians (or all for now for testing)
@@ -259,6 +265,11 @@ class VeterinarianListView(APIView):
 
 class VeterinarianReviewListCreateView(APIView):
     permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            return [IsPetOwner()]
+        return [IsAuthenticated()]
 
     def get(self, request, veterinarian_id):
         """
@@ -353,7 +364,7 @@ class VeterinarianReviewDetailView(APIView):
 
 
 class UserReviewListView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsPetOwner]
 
     def get(self, request):
         """
@@ -385,7 +396,7 @@ class PublicStatsView(APIView):
 
 
 class AppointmentReviewView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsPetOwnerOrVeterinarian]
 
     def get(self, request, appointment_id):
         """
@@ -534,27 +545,19 @@ class DashboardStatsView(APIView):
                 if appt.status in ('PENDING_PAYMENT', 'PENDING'):
                     pending_appointments.append(entry)
 
-            # Earnings — sum of completed payments to this vet
+            # Earnings — sum of consultation fees from completed appointments (not including tax)
             total_earnings = 0.0
             try:
-                earnings_qs = Payment.objects.filter(
-                    appointment__veterinarian=vet_profile,
-                    status=PaymentStatus.COMPLETED
+                from apps.appointments.models import Appointment
+                earnings_qs = Appointment.objects.filter(
+                    veterinarian=vet_profile,
+                    status='COMPLETED'
                 )
-                total_earnings = float(sum(p.amount for p in earnings_qs))
+                total_earnings = float(sum(appt.fee_charged for appt in earnings_qs))
             except Exception:
                 pass
 
-            # Profile completion check
-            profile_complete = False
-            if vet_profile:
-                profile_complete = all([
-                    vet_profile.license_number,
-                    vet_profile.qualification,
-                    vet_profile.specialization,
-                    vet_profile.clinic_name,
-                    vet_profile.profile_image,
-                ])
+            profile_complete = bool(vet_profile and vet_profile.is_profile_complete())
 
             return Response({
                 'role': 'VETERINARIAN',
@@ -576,3 +579,26 @@ class DashboardStatsView(APIView):
         elif user.role == UserRole.SELLER:
             return Response({'role': 'SELLER', 'stats': {}})
         return Response({'error': 'Unsupported role'}, status=400)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class ForgotPasswordView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email')
+        new_password = request.data.get('new_password')
+        
+        if not email or not new_password:
+            return Response({'error': 'Email and new password are required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response({'error': 'No account found with this email'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Set new password directly
+        user.set_password(new_password)
+        user.save()
+        
+        return Response({'message': 'Password has been reset successfully'}, status=status.HTTP_200_OK)

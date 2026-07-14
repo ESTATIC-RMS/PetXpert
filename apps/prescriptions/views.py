@@ -9,10 +9,16 @@ from django.shortcuts import get_object_or_404
 from .models import Prescription
 from .serializers import PrescriptionDetailSerializer, PrescriptionCreateSerializer
 from apps.accounts.models import UserRole
+from apps.core.permissions import IsPetOwner, IsVeterinarian, IsPetOwnerOrVeterinarian
 
 @method_decorator(csrf_exempt, name='dispatch')
 class PrescriptionListCreateView(APIView):
     permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            return [IsVeterinarian()]
+        return [IsPetOwnerOrVeterinarian()]
 
     def get(self, request):
         try:
@@ -46,13 +52,6 @@ class PrescriptionListCreateView(APIView):
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def post(self, request):
-        user = request.user
-        if user.role != UserRole.VETERINARIAN:
-            return Response(
-                {'error': 'Only veterinarians can create prescriptions.'},
-                status=status.HTTP_403_FORBIDDEN
-            )
-
         try:
             serializer = PrescriptionCreateSerializer(data=request.data, context={'request': request})
             if serializer.is_valid():
@@ -71,7 +70,7 @@ class PrescriptionListCreateView(APIView):
 
 @method_decorator(csrf_exempt, name='dispatch')
 class PrescriptionDetailView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsPetOwnerOrVeterinarian]
 
     def get(self, request, pk):
         try:

@@ -10,11 +10,12 @@ from datetime import datetime, time
 from .models import Appointment, AppointmentStatus
 from .serializers import AppointmentSerializer
 from apps.accounts.models import UserRole
+from apps.core.permissions import IsPetOwner, IsPetOwnerOrVeterinarian
 
 
 @method_decorator(csrf_exempt, name='dispatch')
 class AvailableTimeSlotsView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsPetOwner]
 
     def get(self, request):
         """
@@ -38,16 +39,23 @@ class AvailableTimeSlotsView(APIView):
             afternoon_slots = self._generate_time_slots(time(14, 0), time(16, 0))
             all_slots = morning_slots + afternoon_slots
             
+            # Compare in the project's local timezone. scheduled_at is stored in UTC,
+            # so we must convert to local time before matching against the local slot
+            # keys (and before filtering by the local calendar date).
+            current_tz = timezone.get_current_timezone()
+            day_start = timezone.make_aware(datetime.combine(selected_date, time.min), current_tz)
+            day_end = timezone.make_aware(datetime.combine(selected_date, time.max), current_tz)
+
             existing_appointments = Appointment.objects.filter(
                 veterinarian_id=veterinarian_id,
-                scheduled_at__date=selected_date,
-                status__in=['PENDING', 'CONFIRMED']
+                scheduled_at__range=(day_start, day_end),
+                status__in=['PENDING_PAYMENT', 'PENDING', 'CONFIRMED', 'IN_PROGRESS']
             )
-            
+
             booked_times = set()
             for appointment in existing_appointments:
-                appointment_time = appointment.scheduled_at.time()
-                booked_time = time(appointment_time.hour, 0)
+                local_dt = timezone.localtime(appointment.scheduled_at, current_tz)
+                booked_time = time(local_dt.hour, 0)
                 booked_times.add(booked_time.strftime('%H:%M'))
             
             available_slots = []
@@ -162,6 +170,11 @@ def _serialize_appointment_full(appt, request):
 class AppointmentListCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            return [IsPetOwner()]
+        return [IsPetOwnerOrVeterinarian()]
+
     def get(self, request):
         """
         List all appointments for the current user (pet owner or vet).
@@ -216,7 +229,7 @@ class AppointmentStatusUpdateView(APIView):
       IN_PROGRESS → COMPLETED
       CONFIRMED / PENDING / PENDING_PAYMENT / IN_PROGRESS → CANCELLED
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsPetOwnerOrVeterinarian]
 
     # Maps: (current_status, action) → new_status
     PET_OWNER_TRANSITIONS = {

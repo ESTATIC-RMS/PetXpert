@@ -79,9 +79,20 @@ class Order(BaseModel):
         SHIPPED = 'SHIPPED', 'Shipped'
         DELIVERED = 'DELIVERED', 'Delivered'
         CANCELLED = 'CANCELLED', 'Cancelled'
+
+    class PaymentMethod(models.TextChoices):
+        COD = 'COD', 'Cash on Delivery'
+        STRIPE = 'STRIPE', 'Stripe Online'
+
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='marketplace_orders', db_index=True)
     seller = models.ForeignKey('accounts.SellerProfile', on_delete=models.SET_NULL, null=True, blank=True, related_name='received_orders', db_index=True)
     status = models.CharField(max_length=20, choices=OrderStatus.choices, default=OrderStatus.PENDING_PAYMENT, db_index=True)
+    payment_method = models.CharField(
+        max_length=20,
+        choices=PaymentMethod.choices,
+        default=PaymentMethod.COD,
+        db_index=True,
+    )
     subtotal = models.DecimalField(max_digits=10, decimal_places=2)
     shipping_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     tax = models.DecimalField(max_digits=10, decimal_places=2, default=0)

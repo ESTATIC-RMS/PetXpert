@@ -5,6 +5,33 @@
 
 {% block extra_head %}
 <style>
+    /* Stats Cards */
+    .stat-card {
+        background: #ffffff;
+        border: 1px solid #e7e7f3;
+        border-radius: 1rem;
+        padding: 1.25rem 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        transition: box-shadow 0.2s, transform 0.2s;
+    }
+    .stat-card:hover { box-shadow: 0 8px 24px rgba(0,63,177,0.08); transform: translateY(-2px); }
+    .stat-icon { width:48px; height:48px; border-radius:0.75rem; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+
+    /* Stats Grid */
+    .stats-grid { display: grid; gap: 1rem; }
+
+    /* Quick Actions */
+    .quick-action { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0.5rem; padding:1rem; background:#fff; border:1px solid #e7e7f3; border-radius:1rem; font-weight:700; font-size:0.75rem; color:var(--on-surface-variant); cursor:pointer; transition:all 0.2s; text-decoration:none; text-align:center; }
+    .quick-action:hover { background:var(--primary); color:#fff; border-color:var(--primary); transform:translateY(-2px); box-shadow:0 8px 20px rgba(0,63,177,0.2); }
+    .quick-action:hover .qa-icon { color:#fff; }
+    .qa-icon { color:var(--primary); transition:color 0.2s; }
+
+    /* Quick Actions Grid */
+    .quick-actions-grid { display: grid; gap: 0.75rem; }
+    
+    /* Filter Buttons */
     .filter-btn {
         padding: 6px 14px; border-radius: 9999px; font-size: 12px; font-weight: 700;
         cursor: pointer; transition: all 0.15s; border: 1.5px solid #e7e7f3;
@@ -101,6 +128,57 @@
     @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
     .chevron { transition: transform 0.2s; }
     .chevron.open { transform: rotate(180deg); }
+    
+    /* Responsive Stats Grid */
+    @media (max-width: 640px) {
+        .stats-grid { grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+        .stat-card { padding: 1rem; }
+        .stat-icon { width: 40px; height: 40px; }
+        .quick-actions-grid { grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+        .quick-action { padding: 0.75rem 0.5rem; font-size: 0.65rem; }
+        .qa-icon { width: 20px; height: 20px; }
+
+        /* Header controls mobile */
+        .filter-btn { padding: 5px 10px; font-size: 11px; }
+        #filterBtns { display: flex; flex-wrap: wrap; gap: 0.5rem; width: 100%; }
+        #bookApptBtn { width: 100%; justify-content: center; margin-top: 0.5rem; }
+
+        /* Header container mobile */
+        .flex.flex-wrap.items-center.justify-between { flex-direction: column; align-items: stretch; }
+
+        /* Appointment cards mobile */
+        .appt-card-header { padding: 0.75rem 1rem; }
+        .appt-card-body { padding: 0.75rem 1rem; }
+        .detail-grid { grid-template-columns: 1fr; gap: 0.75rem; }
+        .detail-block { padding: 0.75rem; }
+
+        /* Review modal mobile */
+        #reviewModal { padding: 1.5rem; max-width: 100%; margin: 1rem; }
+        .review-star { font-size: 2rem; }
+
+        /* Toast mobile */
+        .toast { left: 1rem; right: 1rem; bottom: 1rem; }
+    }
+    @media (min-width: 641px) and (max-width: 1024px) {
+        .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        .quick-actions-grid { grid-template-columns: repeat(3, 1fr); }
+
+        /* Header controls tablet */
+        #filterBtns { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+        /* Appointment cards tablet */
+        .detail-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (min-width: 1025px) {
+        .stats-grid { grid-template-columns: repeat(4, 1fr); }
+        .quick-actions-grid { grid-template-columns: repeat(3, 1fr); }
+
+        /* Header controls desktop */
+        #filterBtns { display: flex; gap: 0.5rem; }
+
+        /* Appointment cards desktop */
+        .detail-grid { grid-template-columns: repeat(2, 1fr); }
+    }
 
 
 </style>
@@ -110,6 +188,40 @@
 
 <!-- Toast -->
 <div id="toast" class="toast"></div>
+
+<!-- Stats Skeleton -->
+<div id="statsSkeleton" class="mb-6">
+    <div class="stats-grid">
+        <div class="skeleton h-24 rounded-2xl"></div>
+        <div class="skeleton h-24 rounded-2xl"></div>
+        <div class="skeleton h-24 rounded-2xl"></div>
+        <div class="skeleton h-24 rounded-2xl"></div>
+    </div>
+</div>
+
+<!-- Dashboard Stats Section -->
+<div id="statsSection" class="hidden">
+    <!-- Stats Row -->
+    <div class="stats-grid mb-6" id="statsGrid">
+        <!-- Stats will be injected here via JS -->
+    </div>
+
+    <!-- Quick Actions (Pet Owner Only) -->
+    <div class="quick-actions-grid mb-6 hidden" id="quickActions">
+        <a href="/veterinarians/" class="quick-action" id="qa-book">
+            <i data-lucide="calendar-plus" class="w-6 h-6 qa-icon"></i>
+            Book Appointment
+        </a>
+        <a href="/my-pets/" class="quick-action" id="qa-pets">
+            <i data-lucide="paw-print" class="w-6 h-6 qa-icon"></i>
+            Manage Pets
+        </a>
+        <a href="/veterinarians/" class="quick-action" id="qa-vets">
+            <i data-lucide="stethoscope" class="w-6 h-6 qa-icon"></i>
+            Find a Vet
+        </a>
+    </div>
+</div>
 
 <!-- Header Controls -->
 <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
@@ -230,7 +342,7 @@ function showToast(msg, type='success') {
     t.innerHTML = `<i data-lucide="${icons[type]||'info'}" class="w-4 h-4"></i> ${msg}`;
     t.className = `toast ${type} show`;
     lucide.createIcons();
-    setTimeout(() => { t.classList.remove('show'); }, 3500);
+    setTimeout(() => { t.classList.remove('show'); }, 3000);
 }
 
 
@@ -573,6 +685,107 @@ async function doAction(id, action, event) {
     }
 }
 
+// ─── Load Dashboard Stats ─────────────────────────────────────────────────────
+async function loadDashboardStats() {
+    try {
+        const res = await authenticatedFetch('/api/dashboard/stats/');
+        if (!res.ok) throw new Error('Failed to load dashboard stats');
+        const data = await res.json();
+        
+        document.getElementById('statsSkeleton').style.display = 'none';
+        document.getElementById('statsSection').classList.remove('hidden');
+        
+        if (data.role === 'PET_OWNER') {
+            renderPetOwnerStats(data);
+        } else if (data.role === 'VETERINARIAN') {
+            renderVetStats(data);
+        }
+    } catch (err) {
+        document.getElementById('statsSkeleton').style.display = 'none';
+        console.error('Failed to load dashboard stats:', err);
+    }
+}
+
+function renderPetOwnerStats(data) {
+    const s = data.stats;
+    const statsGrid = document.getElementById('statsGrid');
+    
+    statsGrid.innerHTML = `
+        <div class="stat-card">
+            <div class="stat-icon bg-blue-50"><i data-lucide="paw-print" class="w-6 h-6 text-blue-600"></i></div>
+            <div>
+                <p class="text-2xl font-bold text-gray-900 font-hanken">${s.pets_count}</p>
+                <p class="text-xs text-gray-500 font-semibold">My Pets</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon bg-green-50"><i data-lucide="calendar-check" class="w-6 h-6 text-green-600"></i></div>
+            <div>
+                <p class="text-2xl font-bold text-gray-900 font-hanken">${s.upcoming_appointments_count}</p>
+                <p class="text-xs text-gray-500 font-semibold">Upcoming</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon bg-purple-50"><i data-lucide="calendar" class="w-6 h-6 text-purple-600"></i></div>
+            <div>
+                <p class="text-2xl font-bold text-gray-900 font-hanken">${s.total_appointments}</p>
+                <p class="text-xs text-gray-500 font-semibold">Total Visits</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon bg-orange-50"><i data-lucide="banknote" class="w-6 h-6 text-orange-500"></i></div>
+            <div>
+                <p class="text-2xl font-bold text-gray-900 font-hanken">${s.total_spent.toLocaleString('en-PK', {maximumFractionDigits: 0})}</p>
+                <p class="text-xs text-gray-500 font-semibold">Total Spent (PKR)</p>
+            </div>
+        </div>
+    `;
+    
+    // Show quick actions for pet owners
+    document.getElementById('quickActions').classList.remove('hidden');
+    lucide.createIcons();
+}
+
+function renderVetStats(data) {
+    const s = data.stats;
+    const statsGrid = document.getElementById('statsGrid');
+    
+    statsGrid.innerHTML = `
+        <div class="stat-card">
+            <div class="stat-icon bg-blue-50"><i data-lucide="calendar-clock" class="w-6 h-6 text-blue-600"></i></div>
+            <div>
+                <p class="text-2xl font-bold text-gray-900 font-hanken">${s.today_count}</p>
+                <p class="text-xs text-gray-500 font-semibold">Today's Appts</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon bg-green-50"><i data-lucide="calendar" class="w-6 h-6 text-green-600"></i></div>
+            <div>
+                <p class="text-2xl font-bold text-gray-900 font-hanken">${s.upcoming_count}</p>
+                <p class="text-xs text-gray-500 font-semibold">Upcoming</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon bg-yellow-50"><i data-lucide="star" class="w-6 h-6 text-yellow-500"></i></div>
+            <div>
+                <p class="text-2xl font-bold text-gray-900 font-hanken">${s.avg_rating.toFixed(1)} <span class="text-sm text-gray-400 font-normal">(${s.rating_count})</span></p>
+                <p class="text-xs text-gray-500 font-semibold">Avg Rating</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon bg-teal-50"><i data-lucide="banknote" class="w-6 h-6 text-teal-600"></i></div>
+            <div>
+                <p class="text-2xl font-bold text-gray-900 font-hanken">${s.total_earnings.toLocaleString('en-PK', {maximumFractionDigits: 0})}</p>
+                <p class="text-xs text-gray-500 font-semibold">Earnings (PKR)</p>
+            </div>
+        </div>
+    `;
+    
+    // Hide quick actions for vets
+    document.getElementById('quickActions').classList.add('hidden');
+    lucide.createIcons();
+}
+
 // ─── Load ─────────────────────────────────────────────────────────────────────
 async function loadAppointments() {
     try {
@@ -583,6 +796,9 @@ async function loadAppointments() {
         if (userRole === 'VETERINARIAN') {
             document.getElementById('bookApptBtn').style.display = 'none';
         }
+
+        // Load dashboard stats first
+        await loadDashboardStats();
 
         const res = await authenticatedFetch('/api/appointments/');
         if (!res.ok) throw new Error('Failed to load appointments');

@@ -9,6 +9,12 @@ class NotificationType(models.TextChoices):
     APPOINTMENT_COMPLETED = 'APPOINTMENT_COMPLETED', 'Appointment Completed'
     PAYMENT_RECEIVED = 'PAYMENT_RECEIVED', 'Payment Received'
     REVIEW_RECEIVED = 'REVIEW_RECEIVED', 'Review Received'
+    ORDER_CONFIRMED = 'ORDER_CONFIRMED', 'Order Confirmed'
+    ORDER_CANCELLED = 'ORDER_CANCELLED', 'Order Cancelled'
+    ORDER_SHIPPED = 'ORDER_SHIPPED', 'Order Shipped'
+    ORDER_DELIVERED = 'ORDER_DELIVERED', 'Order Delivered'
+    ORDER_PAYMENT_SUCCESS = 'ORDER_PAYMENT_SUCCESS', 'Order Payment Success'
+    SELLER_NEW_ORDER = 'SELLER_NEW_ORDER', 'Seller New Order'
     GENERAL = 'GENERAL', 'General Notification'
 
 class Notification(BaseModel):

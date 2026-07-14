@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Join PetXpert - Create Account</title>
+    {% load static %}
+    <link rel="icon"  type="image/png" href="{% static 'images/logo.png' %}">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -30,9 +32,12 @@
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
-    <div class="max-w-5xl w-full bg-white rounded-[2rem] shadow-2xl overflow-hidden flex flex-col md:flex-row">
+    <div class="max-w-5xl w-full bg-white rounded-[2rem] shadow-2xl overflow-hidden flex flex-col md:flex-row max-h-[90vh]">
         <!-- Left Side: Branding -->
-        <div class="md:w-5/12 bg-primary p-12 text-white flex flex-col justify-between relative overflow-hidden">
+        <div class="hidden md:flex md:w-5/12 bg-primary p-8 md:p-12 text-white flex-col justify-between relative overflow-hidden flex-shrink-0">
+            <div class="absolute inset-0 opacity-40">
+                <img src="{% static 'images/signup.png' %}" alt="Veterinary Care" class="w-full h-full object-cover">
+            </div>
             <div class="relative z-10">
                 <div class="flex items-center gap-2 mb-12">
                     <div class="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-primary">
@@ -44,33 +49,32 @@
                 <p class="text-blue-100 text-lg">Experience clinical-grade healthcare insights powered by advanced AI and certified veterinary wisdom.</p>
             </div>
             
-            <div class="relative z-10 mt-12 bg-white/10 backdrop-blur-md p-6 rounded-2xl border border-white/20">
-                <div class="flex items-center gap-2 mb-3">
-                    <div class="w-5 h-5 bg-green-400 rounded-full flex items-center justify-center text-[10px] text-primary">
-                        <i data-lucide="check" class="w-3 h-3"></i>
-                    </div>
-                    <span class="text-xs font-bold tracking-wider uppercase">Trusted by 10,000+ Vets</span>
-                </div>
-                <p class="text-sm italic mb-4">"The diagnostic accuracy has transformed how we approach early triage in our clinic."</p>
-                <p class="text-xs font-bold">— Dr. Sarah Chen, Veterinary Director</p>
-            </div>
+            
 
             <!-- Background Decoration -->
             <div class="absolute -bottom-20 -right-20 w-64 h-64 bg-white/5 rounded-full"></div>
         </div>
 
         <!-- Right Side: Form -->
-        <div class="md:w-7/12 p-12 bg-white">
+        <div class="md:w-7/12 p-6 md:p-12 bg-white overflow-y-auto">
+            <!-- Mobile Header -->
+            <div class="md:hidden flex items-center gap-2 mb-6">
+                <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white">
+                    <i data-lucide="paw-print" class="w-6 h-6"></i>
+                </div>
+                <span class="text-2xl font-bold text-primary">PetXpert</span>
+            </div>
             <h2 class="text-3xl font-bold text-gray-900 mb-2">Join PetXpert</h2>
             <p class="text-gray-500 mb-8">Access clinical-grade care and AI diagnostics for your pets today.</p>
 
-            <form id="signupForm" class="space-y-5">
+            <form id="signupForm" class="space-y-4 md:space-y-5">
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">Full Name</label>
                     <div class="relative">
                         <i data-lucide="user" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"></i>
                         <input type="text" id="full_name" required class="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all" placeholder="Dr. John Doe or Pet Parent Name">
                     </div>
+                    <p id="fullNameError" class="mt-1 text-xs text-red-500 hidden"></p>
                 </div>
 
                 <div>
@@ -79,6 +83,7 @@
                         <i data-lucide="mail" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"></i>
                         <input type="email" id="email" required class="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all" placeholder="you@clinical.com">
                     </div>
+                    <p id="emailError" class="mt-1 text-xs text-red-500 hidden"></p>
                 </div>
 
                 <div>
@@ -86,11 +91,21 @@
                     <div class="relative">
                         <i data-lucide="lock" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"></i>
                         <input type="password" id="password" required class="w-full pl-12 pr-12 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all" placeholder="••••••••">
-                        <button type="button" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                        <button type="button" id="togglePassword" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                             <i data-lucide="eye" class="w-5 h-5"></i>
                         </button>
                     </div>
-                    <p class="mt-2 text-xs text-gray-400">Use 8+ characters with a mix of letters & numbers.</p>
+                    <p id="passwordError" class="mt-1 text-xs text-red-500 hidden"></p>
+                    <!-- Password Strength Indicator -->
+                    <div class="mt-2 space-y-1">
+                        <div class="flex gap-1">
+                            <div id="strength-1" class="h-1 flex-1 rounded bg-gray-200 transition-colors"></div>
+                            <div id="strength-2" class="h-1 flex-1 rounded bg-gray-200 transition-colors"></div>
+                            <div id="strength-3" class="h-1 flex-1 rounded bg-gray-200 transition-colors"></div>
+                            <div id="strength-4" class="h-1 flex-1 rounded bg-gray-200 transition-colors"></div>
+                        </div>
+                        <p id="strengthText" class="text-xs text-gray-400">Use 8+ characters with mix of letters, numbers & symbols</p>
+                    </div>
                 </div>
 
                 <div>
@@ -101,22 +116,14 @@
                     </div>
                     <button type="button" onclick="setRole('SELLER')" id="role_seller" class="role-btn w-full mt-3 py-3 rounded-xl border-2 border-gray-100 text-gray-500 font-bold hover:border-gray-200 transition-all">Seller</button>
                     <input type="hidden" id="role" value="PET_OWNER">
-                </div>
-
-                <div class="flex items-center gap-3">
-                    <input type="checkbox" required class="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary">
-                    <p class="text-sm text-gray-500">I agree to the <a href="#" class="text-primary font-bold hover:underline">Terms of Service</a> and <a href="#" class="text-primary font-bold hover:underline">Privacy Policy</a>.</p>
-                </div>
+                </div>                
 
                 <button type="submit" id="submitBtn" class="w-full bg-primary text-white py-4 rounded-xl font-bold text-lg hover:bg-blue-800 transition-all flex items-center justify-center gap-2">
                     <span>Create Account</span>
                     <i data-lucide="arrow-right" class="w-5 h-5"></i>
                 </button>
 
-                <div class="relative py-4">
-                    <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-100"></div></div>
-                    <div class="relative flex justify-center text-xs uppercase"><span class="bg-white px-2 text-gray-400 font-bold">or continue with</span></div>
-                </div>
+               
 
                 <p class="text-center text-sm text-gray-500">Already have an account? <a href="/signin/" class="text-primary font-bold hover:underline">Sign In</a></p>
             </form>
@@ -126,8 +133,147 @@
     <script>
         lucide.createIcons();
 
+        // Validation Functions
+        const validators = {
+            fullName: (value) => {
+                if (!value) return 'Full name is required';
+                if (value.trim().length < 2) return 'Name must be at least 2 characters';
+                if (value.trim().length > 100) return 'Name is too long';
+                if (!/^[a-zA-Z\s\-']+$/.test(value)) return 'Name can only contain letters, spaces, hyphens and apostrophes';
+                return null;
+            },
+            email: (value) => {
+                const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+                if (!value) return 'Email is required';
+                if (!emailRegex.test(value)) return 'Please enter a valid email address';
+                if (value.length > 254) return 'Email is too long';
+                return null;
+            },
+            password: (value) => {
+                if (!value) return 'Password is required';
+                if (value.length < 8) return 'Password must be at least 8 characters';
+                if (value.length > 128) return 'Password is too long';
+                if (!/[A-Z]/.test(value)) return 'Password must contain at least one uppercase letter';
+                if (!/[a-z]/.test(value)) return 'Password must contain at least one lowercase letter';
+                if (!/[0-9]/.test(value)) return 'Password must contain at least one number';
+                if (!/[^A-Za-z0-9]/.test(value)) return 'Password must contain at least one special character';
+                return null;
+            }
+        };
+
+        // Password Strength Calculator
+        function calculatePasswordStrength(password) {
+            let strength = 0;
+            if (password.length >= 8) strength++;
+            if (password.length >= 12) strength++;
+            if (/[A-Z]/.test(password) && /[a-z]/.test(password)) strength++;
+            if (/[0-9]/.test(password) && /[^A-Za-z0-9]/.test(password)) strength++;
+            return strength;
+        }
+
+        // Update Password Strength Indicator
+        function updatePasswordStrength(password) {
+            const strength = calculatePasswordStrength(password);
+            const bars = [
+                document.getElementById('strength-1'),
+                document.getElementById('strength-2'),
+                document.getElementById('strength-3'),
+                document.getElementById('strength-4')
+            ];
+            const strengthText = document.getElementById('strengthText');
+            const colors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-green-500'];
+            const texts = ['Weak', 'Fair', 'Good', 'Strong'];
+            const textColors = ['text-red-500', 'text-orange-500', 'text-yellow-500', 'text-green-500'];
+            
+            bars.forEach((bar, index) => {
+                bar.className = 'h-1 flex-1 rounded transition-colors';
+                if (index < strength) {
+                    bar.classList.add(colors[strength - 1]);
+                } else {
+                    bar.classList.add('bg-gray-200');
+                }
+            });
+            
+            if (password.length > 0) {
+                strengthText.textContent = texts[strength - 1] || 'Too short';
+                strengthText.className = `text-xs ${textColors[strength - 1] || 'text-gray-400'}`;
+            } else {
+                strengthText.textContent = 'Use 8+ characters with mix of letters, numbers & symbols';
+                strengthText.className = 'text-xs text-gray-400';
+            }
+        }
+
+        // Real-time validation
+        function validateField(fieldId, validator) {
+            const field = document.getElementById(fieldId);
+            // Map field IDs to error element IDs
+            const errorIdMap = {
+                'full_name': 'fullNameError',
+                'email': 'emailError',
+                'password': 'passwordError'
+            };
+            const errorElement = document.getElementById(errorIdMap[fieldId] || fieldId + 'Error');
+            
+            if (!errorElement) return true; // Skip validation if error element doesn't exist
+            
+            const error = validator(field.value.trim());
+            
+            if (error) {
+                errorElement.textContent = error;
+                errorElement.classList.remove('hidden');
+                field.classList.add('border-red-500', 'focus:ring-red-500');
+                field.classList.remove('border-gray-100', 'focus:ring-primary');
+                return false;
+            } else {
+                errorElement.classList.add('hidden');
+                field.classList.remove('border-red-500', 'focus:ring-red-500');
+                field.classList.add('border-gray-100', 'focus:ring-primary');
+                return true;
+            }
+        }
+
+        // Add real-time validation listeners
+        document.getElementById('full_name').addEventListener('blur', () => validateField('full_name', validators.fullName));
+        document.getElementById('full_name').addEventListener('input', () => {
+            const errorElement = document.getElementById('fullNameError');
+            if (!errorElement.classList.contains('hidden')) {
+                validateField('full_name', validators.fullName);
+            }
+        });
+        document.getElementById('email').addEventListener('blur', () => validateField('email', validators.email));
+        document.getElementById('email').addEventListener('input', () => {
+            const errorElement = document.getElementById('emailError');
+            if (!errorElement.classList.contains('hidden')) {
+                validateField('email', validators.email);
+            }
+        });
+        document.getElementById('password').addEventListener('input', (e) => {
+            updatePasswordStrength(e.target.value);
+            const errorElement = document.getElementById('passwordError');
+            if (!errorElement.classList.contains('hidden')) {
+                validateField('password', validators.password);
+            }
+        });
+        document.getElementById('password').addEventListener('blur', () => validateField('password', validators.password));
+
+        // Toggle Password Visibility
+        document.getElementById('togglePassword').addEventListener('click', function() {
+            const passwordInput = document.getElementById('password');
+            const icon = this.querySelector('i');
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                icon.setAttribute('data-lucide', 'eye-off');
+            } else {
+                passwordInput.type = 'password';
+                icon.setAttribute('data-lucide', 'eye');
+            }
+            lucide.createIcons();
+        });
+
         // Local Toast Notification System
         function showToast(message, type = 'success', duration = 4000) {
+            // Ensure minimum duration of 3 seconds
+            if (duration < 3000) duration = 3000;
             const container = document.getElementById('toast-container');
             if (!container) return;
 
@@ -198,13 +344,24 @@
 
         document.getElementById('signupForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+            
+            // Validate all fields before submission
+            const isNameValid = validateField('full_name', validators.fullName);
+            const isEmailValid = validateField('email', validators.email);
+            const isPasswordValid = validateField('password', validators.password);
+            
+            if (!isNameValid || !isEmailValid || !isPasswordValid) {
+                showToast('Please fix the errors before submitting', 'error');
+                return;
+            }
+            
             const submitBtn = document.getElementById('submitBtn');
             submitBtn.disabled = true;
             submitBtn.innerHTML = 'Creating account...';
 
             const data = {
-                full_name: document.getElementById('full_name').value,
-                email: document.getElementById('email').value,
+                full_name: document.getElementById('full_name').value.trim(),
+                email: document.getElementById('email').value.trim(),
                 password: document.getElementById('password').value,
                 role: document.getElementById('role').value
             };
@@ -224,11 +381,18 @@
                     localStorage.setItem('refresh_token', result.refresh);
                     localStorage.setItem('user', JSON.stringify(result.user));
                     
-                    // Redirect
+                    // Set flag to show welcome on diagnosis page
+                    localStorage.setItem('show_welcome', 'true');
+                    localStorage.setItem('petxpert_diagnosis_session', crypto.randomUUID());
+                    Object.keys(localStorage).forEach((key) => {
+                        if (key.startsWith('petxpert_diagnosis_chat_')) localStorage.removeItem(key);
+                    });
                     if (result.user.role === 'VETERINARIAN') {
                         window.location.href = '/veterinarian/complete-profile/';
+                    } else if (result.user.role === 'SELLER') {
+                        window.location.href = '/marketplace/orders/manage/';
                     } else {
-                        window.location.href = '/veterinarians/';
+                        window.location.href = '/ai-diagnosis/';
                     }
                 } else {
                     showToast(result.error || 'Something went wrong', 'error');

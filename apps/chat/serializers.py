@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from apps.accounts.models import UserRole
 from .models import ChatGroup, Message, Attachment, MessageType
 
 
@@ -46,13 +47,20 @@ class MessageSerializer(serializers.ModelSerializer):
         avatar_url = None
         
         image_field = None
-        if obj.sender.role == 'VETERINARIAN':
+        if obj.sender.role == UserRole.VETERINARIAN:
             try:
                 if hasattr(obj.sender, 'vet_profile') and obj.sender.vet_profile and obj.sender.vet_profile.profile_image:
                     image_field = obj.sender.vet_profile.profile_image
             except Exception:
                 pass
         
+        if not image_field and obj.sender.role == UserRole.SELLER:
+            try:
+                if hasattr(obj.sender, 'seller_profile') and obj.sender.seller_profile and obj.sender.seller_profile.store_logo:
+                    image_field = obj.sender.seller_profile.store_logo
+            except Exception:
+                pass
+
         if not image_field and obj.sender.avatar:
             image_field = obj.sender.avatar
 

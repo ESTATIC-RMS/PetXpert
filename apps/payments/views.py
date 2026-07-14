@@ -13,13 +13,16 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from apps.accounts.models import VeterinarianProfile
 from apps.appointments.models import Appointment
-from .models import Payment, PaymentStatus
+from apps.marketplace.models import Order
+from apps.marketplace.views import complete_marketplace_order_payment
+from apps.core.permissions import IsPetOwner
+from .models import Payment, PaymentStatus, PaymentMethod
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
 class CreateCheckoutSessionView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsPetOwner]
 
     def post(self, request):
         try:
@@ -112,6 +115,7 @@ class CreateCheckoutSessionView(APIView):
                 payer=request.user,
                 amount=total_amount,
                 currency='PKR',
+                payment_method=PaymentMethod.STRIPE,
                 status=PaymentStatus.PENDING,
                 gateway='Stripe',
                 gateway_txn_id=checkout_session.id,
@@ -134,18 +138,17 @@ def payment_success(request):
     session_id = request.GET.get('session_id')
     payment_record = None
     appointment = None
+    order = None
     error_msg = None
 
     if session_id:
         try:
-            # Fetch the existing Payment record created during checkout
-            payment_record = Payment.objects.select_related('appointment').get(
+            payment_record = Payment.objects.select_related('appointment', 'order').get(
                 gateway_txn_id=session_id
             )
             appointment = payment_record.appointment
+            order = payment_record.order
 
-            # Fallback: verify with Stripe in case webhook hasn't fired yet
-            # (always the case in local dev; harmless no-op in production)
             if payment_record.status != PaymentStatus.COMPLETED:
                 session = stripe.checkout.Session.retrieve(session_id)
                 if session.payment_status == 'paid':
@@ -153,9 +156,11 @@ def payment_success(request):
                     payment_record.paid_at = timezone.now()
                     payment_record.save()
 
-                    if appointment.status != 'CONFIRMED':
+                    if appointment and appointment.status != 'CONFIRMED':
                         appointment.status = 'CONFIRMED'
                         appointment.save()
+                    elif order:
+                        complete_marketplace_order_payment(payment_record)
 
         except Payment.DoesNotExist:
             error_msg = 'Payment record not found. If you completed payment, please contact support with your session ID.'
@@ -166,12 +171,26 @@ def payment_success(request):
         'session_id': session_id,
         'payment': payment_record,
         'appointment': appointment,
+        'order': order,
         'error_msg': error_msg,
     })
 
 
 def payment_cancel(request):
-    return render(request, 'payments/cancel.html')
+    order_id = request.GET.get('order_id')
+    cancelled_order = None
+    if order_id:
+        try:
+            order = Order.objects.get(id=order_id)
+            if order.status == Order.OrderStatus.PENDING_PAYMENT:
+                order.status = Order.OrderStatus.CANCELLED
+                order.save(update_fields=['status'])
+                cancelled_order = order
+                from apps.marketplace.views import _notify_order_cancelled
+                _notify_order_cancelled(order)
+        except Order.DoesNotExist:
+            pass
+    return render(request, 'payments/cancel.html', {'order': cancelled_order})
 
 
 def payment_page(request):
@@ -224,8 +243,7 @@ def stripe_webhook(request):
         session = event['data']['object']
 
         try:
-            # --- Step 4: Webhook only updates existing records ---
-            payment = Payment.objects.select_related('appointment').get(
+            payment = Payment.objects.select_related('appointment', 'order').get(
                 gateway_txn_id=session.id
             )
 
@@ -234,13 +252,13 @@ def stripe_webhook(request):
                 payment.paid_at = timezone.now()
                 payment.save()
 
-            appointment = payment.appointment
-            if appointment.status != 'CONFIRMED':
-                appointment.status = 'CONFIRMED'
-                appointment.save()
+            if payment.appointment and payment.appointment.status != 'CONFIRMED':
+                payment.appointment.status = 'CONFIRMED'
+                payment.appointment.save()
+            elif payment.order:
+                complete_marketplace_order_payment(payment)
 
         except Payment.DoesNotExist:
-            # Payment record missing — log and return 200 to avoid Stripe retries
             pass
         except Exception:
             pass

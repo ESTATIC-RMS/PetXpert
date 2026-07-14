@@ -47,6 +47,12 @@ class VeterinarianStatus(models.TextChoices):
     REJECTED = 'REJECTED', 'Rejected'
 
 class VeterinarianProfile(BaseModel):
+    REQUIRED_COMPLETION_FIELDS = (
+        'license_number', 'qualification', 'specialization', 'clinic_name',
+        'profile_image', 'phone_number', 'clinic_address', 'consultation_fee',
+        'location', 'bio', 'years_experience', 'account_number',
+    )
+
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='vet_profile')
     profile_image = models.ImageField(upload_to='avatars/vets/', null=True, blank=True)
     license_number = models.CharField(max_length=100, unique=True, null=True, blank=True)
@@ -63,9 +69,25 @@ class VeterinarianProfile(BaseModel):
     clinic_address = models.TextField(blank=True, null=True)
     phone_number = models.CharField(max_length=20, blank=True, null=True)
     qualification = models.CharField(max_length=255, blank=True, null=True)
+    account_number = models.CharField(max_length=50, blank=True, null=True)
 
     class Meta:
         db_table = 'users_veterinarianprofile'
+
+    def is_profile_complete(self):
+        for field in self.REQUIRED_COMPLETION_FIELDS:
+            value = getattr(self, field, None)
+            if value is None:
+                return False
+            if isinstance(value, str) and not value.strip():
+                return False
+            if field == 'consultation_fee' and float(value) <= 0:
+                return False
+            if field == 'years_experience' and int(value) < 0:
+                return False
+        if self.bio and len(self.bio.strip()) < 20:
+            return False
+        return True
 
 class VeterinarianReview(BaseModel):
     veterinarian = models.ForeignKey(VeterinarianProfile, on_delete=models.RESTRICT, related_name='reviews', db_index=True)

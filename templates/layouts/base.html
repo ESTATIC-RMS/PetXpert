@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}PetXpert{% endblock %}</title>
+    {% load static %}
+    <link rel="icon" type="image/png" href="{% static 'images/logo.png' %}">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&family=Inter:wght@400;500&family=JetBrains+Mono&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -106,128 +108,148 @@
     {% block extra_head %}{% endblock %}
 </head>
 <body class="flex">
+    <!-- Mobile Sidebar Overlay -->
+    <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden" onclick="closeSidebar()"></div>
+
     <!-- Sidebar -->
-    <aside class="w-[240px] bg-white border-r border-gray-100 flex flex-col fixed h-full z-50">
-        <div class="p-6 flex items-center gap-3">
-            <div class="w-10 h-10 bg-[var(--primary)] rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-100">
-                <i data-lucide="paw-print" class="w-6 h-6"></i>
-            </div>
-            <span class="text-2xl font-bold text-[var(--primary)] font-hanken">PetXpert</span>
-        </div>
-
-        <nav class="flex-1 px-4 py-6 space-y-1">
-            <a href="/dashboard/" id="nav-dashboard" class="flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-[var(--surface-container-low)] rounded-xl transition-all group">
-                <i data-lucide="layout-dashboard" class="w-5 h-5 group-hover:text-[var(--primary)]"></i>
-                <span class="font-semibold text-sm">Dashboard</span>
+    <aside id="sidebar" class="w-[280px] md:w-[260px] lg:w-[240px] xl:w-[260px] bg-white border-r border-gray-100 flex flex-col fixed h-full z-50 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out">
+        <div class="p-4 md:p-5 lg:p-6 flex items-center justify-between flex-shrink-0">
+            <a href="/" id="homeLink" class="flex items-center gap-2 md:gap-3 hover:opacity-80 transition-opacity">
+                <div class="w-9 h-9 md:w-10 md:h-10 bg-[var(--primary)] rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-100">
+                    <i data-lucide="paw-print" class="w-5 h-5 md:w-6 md:h-6"></i>
+                </div>
+                <span class="text-xl md:text-2xl font-bold text-[var(--primary)] font-hanken">PetXpert</span>
             </a>
-            <a href="/veterinarians/" id="nav-vets" class="pet-owner-only flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-[var(--surface-container-low)] rounded-xl transition-all group" style="display:none">
-                <i data-lucide="stethoscope" class="w-5 h-5 group-hover:text-[var(--primary)]"></i>
-                <span class="font-semibold text-sm">Vet Services</span>
-            </a>
-            <a href="/my-pets/" id="nav-pets" class="pet-only flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-[var(--surface-container-low)] rounded-xl transition-all group" style="display:none">
-                <i data-lucide="paw-print" class="w-5 h-5 group-hover:text-[var(--primary)]"></i>
-                <span class="font-semibold text-sm">My Pets</span>
-            </a>
-            <a href="/ai-diagnosis/" id="nav-diagnosis" class="pet-owner-only flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-[var(--surface-container-low)] rounded-xl transition-all group" style="display:none">
-                <i data-lucide="microscope" class="w-5 h-5 group-hover:text-[var(--primary)]"></i>
-                <span class="font-semibold text-sm">AI Diagnosis</span>
-            </a>
-            <a href="/appointments/" id="nav-appointments" class="pet-owner-only flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-[var(--surface-container-low)] rounded-xl transition-all group" style="display:none">
-                <i data-lucide="calendar" class="w-5 h-5 group-hover:text-[var(--primary)]"></i>
-                <span class="font-semibold text-sm">Appointments</span>
-            </a>
-            <a href="/prescriptions/" id="nav-prescriptions" class="pet-owner-only flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-[var(--surface-container-low)] rounded-xl transition-all group" style="display:none">
-                <i data-lucide="pill" class="w-5 h-5 group-hover:text-[var(--primary)]"></i>
-                <span class="font-semibold text-sm">Prescriptions</span>
-            </a>
-            <a href="/marketplace/" id="nav-marketplace" class="not-vet flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-[var(--surface-container-low)] rounded-xl transition-all group" style="display:none">
-                <i data-lucide="shopping-bag" class="w-5 h-5 group-hover:text-[var(--primary)]"></i>
-                <span class="font-semibold text-sm">Marketplace</span>
-            </a>
-            <a href="/marketplace/orders/manage/" id="nav-orders" class="not-vet flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-[var(--surface-container-low)] rounded-xl transition-all group" style="display:none">
-                <i data-lucide="clipboard-list" class="w-5 h-5 group-hover:text-[var(--primary)]"></i>
-                <span class="font-semibold text-sm">Orders</span>
-            </a>
-            <a href="/marketplace/inventory/" id="nav-inventory" class="seller-only flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-[var(--surface-container-low)] rounded-xl transition-all group" style="display:none">
-                <i data-lucide="package" class="w-5 h-5 group-hover:text-[var(--primary)]"></i>
-                <span class="font-semibold text-sm">Inventory</span>
-            </a>
-            <a href="/community/" id="nav-community" class="pet-owner-only flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-[var(--surface-container-low)] rounded-xl transition-all group" style="display:none">
-                <i data-lucide="message-circle" class="w-5 h-5 group-hover:text-[var(--primary)]"></i>
-                <span class="font-semibold text-sm">Community Chat</span>
-            </a>
-            <a href="#" onclick="openEditProfileModal()" id="nav-profile" class="flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-[var(--surface-container-low)] rounded-xl transition-all group">
-                <i data-lucide="user" class="w-5 h-5 group-hover:text-[var(--primary)]"></i>
-                <span class="font-semibold text-sm">Edit Profile</span>
-            </a>
-            
-        </nav>
-
-                    
-            <button onclick="logout()" class="w-full flex items-center gap-3 px-4 py-3 mt-4 text-gray-500 hover:text-red-600 transition-colors group">
-                <i data-lucide="log-out" class="w-5 h-5 group-hover:text-red-600"></i>
-                <span class="font-semibold text-sm">Logout</span>
+            <button onclick="closeSidebar()" class="lg:hidden w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200">
+                <i data-lucide="x" class="w-5 h-5"></i>
             </button>
         </div>
+
+        <nav class="flex-1 px-3 md:px-4 py-3 md:py-4 space-y-0.5 md:space-y-1 overflow-y-auto">
+            <a href="/ai-diagnosis/" id="nav-diagnosis" class="pet-owner-only flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2.5 md:py-3 text-gray-500 hover:bg-[var(--surface-container-low)] rounded-xl transition-all group" style="display:none">
+                <i data-lucide="microscope" class="w-4 h-4 md:w-5 md:h-5 group-hover:text-[var(--primary)]"></i>
+                <span class="font-semibold text-xs md:text-sm">AI Diagnosis</span>
+            </a>
+            
+            <a href="/veterinarians/" id="nav-vets" class="owner-vet-only flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2.5 md:py-3 text-gray-500 hover:bg-[var(--surface-container-low)] rounded-xl transition-all group" style="display:none">
+                <i data-lucide="stethoscope" class="w-4 h-4 md:w-5 md:h-5 group-hover:text-[var(--primary)]"></i>
+                <span class="font-semibold text-xs md:text-sm">Vet Services</span>
+            </a>
+
+            <a href="/appointments/" id="nav-appointments" class="owner-vet-only flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2.5 md:py-3 text-gray-500 hover:bg-[var(--surface-container-low)] rounded-xl transition-all group" style="display:none">
+                <i data-lucide="calendar" class="w-4 h-4 md:w-5 md:h-5 group-hover:text-[var(--primary)]"></i>
+                <span class="font-semibold text-xs md:text-sm">Appointments</span>
+            </a>
+            <a href="/prescriptions/" id="nav-prescriptions" class="owner-vet-only flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2.5 md:py-3 text-gray-500 hover:bg-[var(--surface-container-low)] rounded-xl transition-all group" style="display:none">
+                <i data-lucide="pill" class="w-4 h-4 md:w-5 md:h-5 group-hover:text-[var(--primary)]"></i>
+                <span class="font-semibold text-xs md:text-sm">Prescriptions</span>
+            </a>
+            <a href="/marketplace/" id="nav-marketplace" class="owner-seller-only flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2.5 md:py-3 text-gray-500 hover:bg-[var(--surface-container-low)] rounded-xl transition-all group" style="display:none">
+                <i data-lucide="shopping-bag" class="w-4 h-4 md:w-5 md:h-5 group-hover:text-[var(--primary)]"></i>
+                <span class="font-semibold text-xs md:text-sm">Marketplace</span>
+            </a>
+            <a href="/marketplace/orders/" id="nav-buyer-orders" class="owner-only flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2.5 md:py-3 text-gray-500 hover:bg-[var(--surface-container-low)] rounded-xl transition-all group" style="display:none">
+                <i data-lucide="shopping-bag" class="w-4 h-4 md:w-5 md:h-5 group-hover:text-[var(--primary)]"></i>
+                <span class="font-semibold text-xs md:text-sm">My Orders</span>
+            </a>
+            <a href="/marketplace/orders/manage/" id="nav-orders" class="seller-only flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2.5 md:py-3 text-gray-500 hover:bg-[var(--surface-container-low)] rounded-xl transition-all group" style="display:none">
+                <i data-lucide="clipboard-list" class="w-4 h-4 md:w-5 md:h-5 group-hover:text-[var(--primary)]"></i>
+                <span class="font-semibold text-xs md:text-sm">Orders</span>
+            </a>
+            <a href="/marketplace/inventory/" id="nav-inventory" class="seller-only flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2.5 md:py-3 text-gray-500 hover:bg-[var(--surface-container-low)] rounded-xl transition-all group" style="display:none">
+                <i data-lucide="package" class="w-4 h-4 md:w-5 md:h-5 group-hover:text-[var(--primary)]"></i>
+                <span class="font-semibold text-xs md:text-sm">Inventory</span>
+            </a>
+            <a href="/community/" id="nav-community" class="shared-community flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2.5 md:py-3 text-gray-500 hover:bg-[var(--surface-container-low)] rounded-xl transition-all group" style="display:none">
+                <i data-lucide="message-circle" class="w-4 h-4 md:w-5 md:h-5 group-hover:text-[var(--primary)]"></i>
+                <span class="font-semibold text-xs md:text-sm">Community Chat</span>
+            </a>
+        </nav>
     </aside>
 
     <!-- Main Content -->
-    <main class="flex-1 ml-[240px] min-h-screen">
+    <main class="flex-1 ml-0 lg:ml-[240px] xl:ml-[260px] min-h-screen transition-all duration-300">
         <!-- Top Header -->
-        <header class="h-20 bg-white/80 backdrop-blur-md border-b border-gray-100 px-8 flex justify-between items-center sticky top-0 z-40">
-            <div>
-                <h2 class="text-xl font-bold text-gray-900 font-hanken">{% block page_title %}{% endblock %}</h2>
-                <p class="text-xs text-gray-500 font-medium">{% block page_subtitle %}{% endblock %}</p>
+        <header class="h-16 md:h-18 lg:h-20 bg-white/80 backdrop-blur-md border-b border-gray-100 px-3 md:px-4 lg:px-6 xl:px-8 flex justify-between items-center sticky top-0 z-40">
+            <div class="flex items-center gap-2 md:gap-3 lg:gap-4">
+                <button onclick="openSidebar()" class="lg:hidden w-9 h-9 md:w-10 md:h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-500 hover:bg-gray-100">
+                    <i data-lucide="menu" class="w-5 h-5 md:w-6 md:h-6"></i>
+                </button>
+                <div class="min-w-0">
+                    <h2 class="text-lg md:text-xl font-bold text-gray-900 font-hanken truncate">{% block page_title %}{% endblock %}</h2>
+                    <p class="text-[10px] md:text-xs text-gray-500 font-medium truncate">{% block page_subtitle %}{% endblock %}</p>
+                </div>
             </div>
             
-            <div class="flex items-center gap-6">
-                <a href="/marketplace/wishlist/" id="wishlistLink" class="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors relative hidden">
-                    <i data-lucide="heart" class="w-5 h-5"></i>
+            <div class="flex items-center gap-3 md:gap-4 lg:gap-6">
+                <a href="/marketplace/cart/" id="cartLink" class="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors relative hidden">
+                    <i data-lucide="shopping-cart" class="w-4 h-4 md:w-5 md:h-5"></i>
+                    <span id="cartBadge" class="absolute -top-1.5 -right-1.5 bg-[var(--primary)] text-white text-[8px] md:text-[9px] font-bold rounded-full w-4 h-4 md:w-5 md:h-5 flex items-center justify-center border-2 border-white shadow-sm hidden">0</span>
                 </a>
-                <a href="/marketplace/cart/" id="cartLink" class="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors relative hidden">
-                    <i data-lucide="shopping-cart" class="w-5 h-5"></i>
-                    <span id="cartBadge" class="absolute -top-1.5 -right-1.5 bg-[var(--primary)] text-white text-[9px] font-bold rounded-full w-5 h-5 flex items-center justify-center border-2 border-white shadow-sm hidden">0</span>
-                </a>
-                <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2 md:gap-3 lg:gap-4">
                     <!-- Notification Bell and Dropdown -->
                     <div class="relative flex items-center">
-                        <button id="notificationBtn" class="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors relative focus:outline-none">
-                            <i data-lucide="bell" class="w-5 h-5"></i>
-                            <span id="notificationBadge" class="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] font-bold rounded-full w-5 h-5 flex items-center justify-center border-2 border-white shadow-sm hidden">0</span>
+                        <button id="notificationBtn" class="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors relative focus:outline-none">
+                            <i data-lucide="bell" class="w-4 h-4 md:w-5 md:h-5"></i>
+                            <span id="notificationBadge" class="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[8px] md:text-[9px] font-bold rounded-full w-4 h-4 md:w-5 md:h-5 flex items-center justify-center border-2 border-white shadow-sm hidden">0</span>
                         </button>
                         
                         <!-- Dropdown Menu -->
-                        <div id="notificationDropdown" class="absolute right-0 top-12 w-80 bg-white border border-gray-100 rounded-2xl shadow-xl z-[100] hidden flex-col max-h-[400px] overflow-hidden">
-                            <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                                <span class="font-bold text-gray-900 text-sm font-hanken">Notifications</span>
-                                <button id="markAllReadBtn" class="text-xs text-[var(--primary)] hover:underline font-semibold focus:outline-none hidden">Mark all as read</button>
+                        <div id="notificationDropdown" class="absolute right-0 top-12 w-72 md:w-80 bg-white border border-gray-100 rounded-2xl shadow-xl z-[100] hidden flex-col max-h-[350px] md:max-h-[400px] overflow-hidden">
+                            <div class="p-3 md:p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                                <span class="font-bold text-gray-900 text-xs md:text-sm font-hanken">Notifications</span>
+                                <button id="markAllReadBtn" class="text-[10px] md:text-xs text-[var(--primary)] hover:underline font-semibold focus:outline-none hidden">Mark all as read</button>
                             </div>
-                            <div id="notificationList" class="overflow-y-auto flex-1 divide-y divide-gray-100 max-h-[300px]">
-                                <div class="p-8 text-center text-gray-400 text-sm">
-                                    <i data-lucide="bell-off" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+                            <div id="notificationList" class="overflow-y-auto flex-1 divide-y divide-gray-100 max-h-[280px] md:max-h-[300px]">
+                                <div class="p-6 md:p-8 text-center text-gray-400 text-xs md:text-sm">
+                                    <i data-lucide="bell-off" class="w-6 h-6 md:w-8 md:h-8 mx-auto mb-2 opacity-50"></i>
                                     No notifications yet
                                 </div>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="h-10 w-px bg-gray-100"></div>
+                    <div class="h-8 md:h-10 w-px bg-gray-100"></div>
                     
-                    <div class="flex items-center gap-3">
-                        <div class="text-right">
-                            <p id="userName" class="text-sm font-bold text-gray-900">User</p>
-                            <p id="userRole" class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Role</p>
+                    <div class="relative" id="profileDropdownContainer">
+                        <button id="profileDropdownBtn" class="flex items-center gap-2 md:gap-3 focus:outline-none">
+                            <div class="text-right hidden sm:block">
+                                <p id="userName" class="text-xs md:text-sm font-bold text-gray-900 truncate max-w-[80px] md:max-w-[100px]">User</p>
+                                <p id="userRole" class="text-[9px] md:text-[10px] text-gray-500 font-bold uppercase tracking-wider">Role</p>
+                            </div>
+                            <div class="relative">
+                                <div id="profileAvatar" class="w-9 h-9 md:w-10 md:h-10 bg-blue-100 rounded-xl flex items-center justify-center text-[var(--primary)] overflow-hidden shadow-sm">
+                                    <i data-lucide="user" class="w-5 h-5 md:w-6 md:h-6"></i>
+                                </div>
+                                <div id="profileAvatarSkeleton" class="w-9 h-9 md:w-10 md:h-10 bg-gray-200 rounded-xl animate-pulse hidden"></div>
+                                <div class="absolute -bottom-1 -right-1 w-4 h-4 md:w-5 md:h-5 bg-[var(--primary)] rounded-full flex items-center justify-center shadow-sm border-2 border-white">
+                                    <i data-lucide="chevron-down" class="w-2.5 h-2.5 md:w-3 md:h-3 text-white"></i>
+                                </div>
+                            </div>
+                        </button>
+                        
+                        <!-- Profile Dropdown Menu -->
+                        <div id="profileDropdown" class="absolute right-0 top-14 w-52 md:w-56 bg-white border border-gray-100 rounded-2xl shadow-xl z-[100] hidden flex-col overflow-hidden transform origin-top-right transition-all duration-200">
+                            <a href="/my-pets/" onclick="closeProfileDropdown();" class="pet-only w-full flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2.5 md:py-3 text-gray-700 hover:bg-gray-50 transition-colors text-left" style="display:none">
+                                <i data-lucide="plus" class="w-3.5 h-3.5 md:w-4 md:h-4 text-gray-500"></i>
+                                <span class="text-xs md:text-sm font-semibold">Add Pet</span>
+                            </a>
+                            <button onclick="openEditProfileModal(); closeProfileDropdown();" class="w-full flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2.5 md:py-3 text-gray-700 hover:bg-gray-50 transition-colors text-left">
+                                <i data-lucide="user" class="w-3.5 h-3.5 md:w-4 md:h-4 text-gray-500"></i>
+                                <span class="text-xs md:text-sm font-semibold">Edit Profile</span>
+                            </button>
+                            <div class="border-t border-gray-100"></div>
+                            <button onclick="confirmLogout(); closeProfileDropdown();" class="w-full flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2.5 md:py-3 text-red-600 hover:bg-red-50 transition-colors text-left">
+                                <i data-lucide="log-out" class="w-3.5 h-3.5 md:w-4 md:h-4"></i>
+                                <span class="text-xs md:text-sm font-semibold">Logout</span>
+                            </button>
                         </div>
-                        <div id="profileAvatar" class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-[var(--primary)] overflow-hidden shadow-sm">
-                            <i data-lucide="user" class="w-6 h-6"></i>
-                        </div>
-                        <div id="profileAvatarSkeleton" class="w-10 h-10 bg-gray-200 rounded-xl animate-pulse hidden"></div>
                     </div>
                 </div>
             </div>
         </header>
 
-        <div class="p-8">
+        <div class="p-4 md:p-6 lg:p-8">
             {% block content %}{% endblock %}
         </div>
     </main>
@@ -347,6 +369,8 @@
 
         // Global Toast Notification System
         window.showToast = function(message, type = 'success', duration = 4000) {
+            // Ensure minimum duration of 3 seconds
+            if (duration < 3000) duration = 3000;
             const container = document.getElementById('toast-container');
             if (!container) return;
 
@@ -404,6 +428,57 @@
         const token = localStorage.getItem('access_token');
         const userData = localStorage.getItem('user');
 
+        const ROLE_PAGE_RULES = {
+            PET_OWNER: {
+                allow: ['/ai-diagnosis', '/veterinarians', '/my-pets', '/community', '/appointments', '/prescriptions', '/marketplace', '/payment'],
+                deny: ['/marketplace/seller', '/marketplace/inventory', '/marketplace/admin', '/veterinarian/complete-profile'],
+            },
+            VETERINARIAN: {
+                allow: ['/veterinarians', '/appointments', '/prescriptions', '/community', '/veterinarian/complete-profile', '/payment'],
+                deny: ['/ai-diagnosis', '/my-pets', '/marketplace'],
+            },
+            SELLER: {
+                allow: ['/marketplace/seller', '/marketplace/inventory', '/marketplace/product', '/marketplace/', '/community'],
+                deny: ['/ai-diagnosis', '/veterinarians', '/my-pets', '/appointments', '/prescriptions', '/veterinarian', '/payment', '/marketplace/cart', '/marketplace/checkout', '/marketplace/wishlist', '/marketplace/order-confirmation'],
+            },
+            ADMIN: {
+                allow: ['/marketplace', '/appointments', '/admin'],
+                deny: [],
+            },
+        };
+
+        function getDefaultHomeForRole(role) {
+            switch (role) {
+                case 'VETERINARIAN': return '/appointments/';
+                case 'SELLER': return '/marketplace/orders/manage/';
+                case 'ADMIN': return '/marketplace/admin/';
+                default: return '/ai-diagnosis/';
+            }
+        }
+
+        function isPathAllowedForRole(role, path) {
+            const rules = ROLE_PAGE_RULES[role];
+            if (!rules) return false;
+
+            if (role === 'SELLER' && path.startsWith('/marketplace/orders') && !path.startsWith('/marketplace/orders/manage')) {
+                return false;
+            }
+
+            if (rules.deny.some((prefix) => path.startsWith(prefix))) return false;
+            return rules.allow.some((prefix) => path.startsWith(prefix));
+        }
+
+        function enforcePageAccess(user) {
+            if (!user || !user.role) return;
+            const path = window.location.pathname;
+            const publicPaths = ['/', '/signin/', '/signup/', '/forgot-password/', '/reset-password/'];
+            if (publicPaths.some((publicPath) => path === publicPath || path.startsWith(publicPath))) return;
+            if (isPathAllowedForRole(user.role, path)) return;
+
+            showToast('You do not have permission to access this page.', 'error');
+            window.location.href = getDefaultHomeForRole(user.role);
+        }
+
         if (!token || !userData) {
             window.location.href = '/signin/';
         } else {
@@ -423,20 +498,38 @@
             }
             if (user.role === 'SELLER') {
                 document.querySelectorAll('.seller-only').forEach(function(el) { el.style.display = 'flex'; });
-                document.querySelectorAll('.not-vet').forEach(function(el) { el.style.display = 'flex'; });
+                document.querySelectorAll('.owner-seller-only').forEach(function(el) { el.style.display = 'flex'; });
+                document.querySelectorAll('.shared-community').forEach(function(el) { el.style.display = 'flex'; });
             } else if (user.role === 'PET_OWNER') {
                 document.querySelectorAll('.pet-owner-only').forEach(function(el) { el.style.display = 'flex'; });
-                document.querySelectorAll('.not-vet').forEach(function(el) { el.style.display = 'flex'; });
+                document.querySelectorAll('.owner-only').forEach(function(el) { el.style.display = 'flex'; });
+                document.querySelectorAll('.owner-vet-only').forEach(function(el) { el.style.display = 'flex'; });
+                document.querySelectorAll('.owner-seller-only').forEach(function(el) { el.style.display = 'flex'; });
+                document.querySelectorAll('.shared-community').forEach(function(el) { el.style.display = 'flex'; });
                 document.querySelectorAll('.pet-only').forEach(function(el) { el.style.display = 'flex'; });
             } else if (user.role === 'VETERINARIAN') {
-                document.querySelectorAll('.pet-owner-only').forEach(function(el) { el.style.display = 'flex'; });
+                document.querySelectorAll('.owner-vet-only').forEach(function(el) { el.style.display = 'flex'; });
+                document.querySelectorAll('.shared-community').forEach(function(el) { el.style.display = 'flex'; });
             }
+
+            window.PetXpertUserRole = user.role;
+            window.canUseMarketplaceCart = user.role === 'PET_OWNER';
+
+            const homeLink = document.getElementById('homeLink');
+            if (homeLink) {
+                homeLink.href = getDefaultHomeForRole(user.role);
+            }
+
+            enforcePageAccess(user);
             updateCartBadge();
         }
 
         async function updateCartBadge() {
             try {
-                const res = await authenticatedFetch('/api/marketplace/cart/');
+                const user = JSON.parse(localStorage.getItem('user') || '{}');
+                if (user.role !== 'PET_OWNER') return;
+
+                const res = await authenticatedFetch('/api/marketplace/cart/', { suppressForbiddenToast: true });
                 if (!res.ok) return;
                 const data = await res.json();
                 const badge = document.getElementById('cartBadge');
@@ -513,11 +606,21 @@
                         delete retryHeaders['Content-Type'];
                     }
                     
-                    return fetch(url, {
+                    const retryResponse = await fetch(url, {
                         ...options,
                         headers: retryHeaders
                     });
+
+                    if (retryResponse.status === 403 && !options.suppressForbiddenToast) {
+                        showToast('You do not have permission to perform this action.', 'error');
+                    }
+
+                    return retryResponse;
                 }
+            }
+
+            if (response.status === 403 && !options.suppressForbiddenToast) {
+                showToast('You do not have permission to perform this action.', 'error');
             }
 
             return response;
@@ -566,8 +669,62 @@
             localStorage.removeItem('access_token');
             localStorage.removeItem('refresh_token');
             localStorage.removeItem('user');
+            localStorage.removeItem('petxpert_diagnosis_session');
+            Object.keys(localStorage).forEach((key) => {
+                if (key.startsWith('petxpert_diagnosis_chat_')) localStorage.removeItem(key);
+            });
             window.location.href = '/signin/';
         }
+
+        function confirmLogout() {
+            showToast('Logging out...', 'info');
+            setTimeout(() => {
+                logout();
+            }, 1000);
+        }
+
+        // Mobile Sidebar Functions
+        function openSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.remove('-translate-x-full');
+            overlay.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.add('-translate-x-full');
+            overlay.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        // Profile Dropdown Functions
+        const profileDropdownBtn = document.getElementById('profileDropdownBtn');
+        const profileDropdown = document.getElementById('profileDropdown');
+        const profileDropdownContainer = document.getElementById('profileDropdownContainer');
+
+        function toggleProfileDropdown() {
+            profileDropdown.classList.toggle('hidden');
+        }
+
+        function closeProfileDropdown() {
+            profileDropdown.classList.add('hidden');
+        }
+
+        // Toggle dropdown on button click
+        profileDropdownBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleProfileDropdown();
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!profileDropdownContainer.contains(e.target)) {
+                closeProfileDropdown();
+            }
+        });
 
         // Edit Profile Modal Functions
         function openEditProfileModal() {
@@ -729,6 +886,13 @@
             .then(response => response.json())
             .then(data => {
                 const userData = JSON.parse(localStorage.getItem('user'));
+                if (data.user) {
+                    const updatedUser = { ...userData, ...data.user };
+                    localStorage.setItem('user', JSON.stringify(updatedUser));
+                }
+                if (typeof window.refreshDiagnosisUserAvatar === 'function') {
+                    window.refreshDiagnosisUserAvatar();
+                }
                 if (userData.role === 'VETERINARIAN') {
                     updateVeterinarianProfile();
                 } else {
@@ -776,8 +940,6 @@
         const currentPath = window.location.pathname;
         const navMap = [
             ['/marketplace/orders/', 'nav-orders'],
-            ['/marketplace/inventory/', 'nav-inventory'],
-            ['/marketplace/wishlist/', 'nav-wishlist'],
             ['/marketplace/inventory/', 'nav-inventory'],
             ['/marketplace/', 'nav-marketplace'],
             ['/dashboard/', 'nav-dashboard'],
@@ -868,6 +1030,7 @@
                 'PAYMENT_RECEIVED': { icon: 'credit-card', color: 'text-amber-500 bg-amber-50' },
                 'REVIEW_RECEIVED': { icon: 'star', color: 'text-yellow-500 bg-yellow-50' },
                 'ORDER_CONFIRMED': { icon: 'package', color: 'text-blue-500 bg-blue-50' },
+                'ORDER_CANCELLED': { icon: 'package-x', color: 'text-red-500 bg-red-50' },
                 'ORDER_SHIPPED': { icon: 'truck', color: 'text-indigo-500 bg-indigo-50' },
                 'ORDER_DELIVERED': { icon: 'package-check', color: 'text-green-500 bg-green-50' },
                 'ORDER_PAYMENT_SUCCESS': { icon: 'credit-card', color: 'text-emerald-500 bg-emerald-50' },
@@ -985,6 +1148,39 @@
             fetchNotifications();
             setInterval(fetchNotifications, 10000);
         });
+
+        (function enforceVetProfileCompletion() {
+            const token = localStorage.getItem('access_token');
+            const userData = localStorage.getItem('user');
+            if (!token || !userData) return;
+
+            let user;
+            try {
+                user = JSON.parse(userData);
+            } catch (error) {
+                return;
+            }
+            if (user.role !== 'VETERINARIAN') return;
+
+            const path = window.location.pathname;
+            const allowedPaths = ['/veterinarian/complete-profile/', '/signin/', '/signup/'];
+            if (allowedPaths.some((allowed) => path.startsWith(allowed))) return;
+            if (user.is_profile_complete === true) return;
+
+            fetch('/api/profile/vet/update/', {
+                headers: { Authorization: `Bearer ${token}` }
+            })
+            .then((response) => (response.ok ? response.json() : null))
+            .then((profile) => {
+                if (profile && profile.is_profile_complete) {
+                    user.is_profile_complete = true;
+                    localStorage.setItem('user', JSON.stringify(user));
+                    return;
+                }
+                window.location.href = '/veterinarian/complete-profile/';
+            })
+            .catch(() => {});
+        })();
     </script>
     {% block extra_js %}{% endblock %}
     <!-- Global Toast Container -->

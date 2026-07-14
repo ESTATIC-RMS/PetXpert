@@ -1,0 +1,16 @@
+{% extends "admin/base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Permission denied" %} | {{ site_title|default:_('PetXpert Admin') }}{% endblock %}
+
+{% block content %}
+<div class="px-error-page">
+    <div class="px-error-code">403</div>
+    <h1 class="px-error-title">{% trans "Permission Denied" %}</h1>
+    <p class="px-error-desc">{% trans "You don't have permission to access this page. Contact your administrator if you believe this is an error." %}</p>
+    <a href="{% url 'admin:index' %}" class="px-quick-btn px-quick-btn-primary">
+        <span class="material-symbols-outlined text-base">dashboard</span>
+        {% trans "Back to Dashboard" %}
+    </a>
+</div>
+{% endblock %}

@@ -1,23 +1,140 @@
 from rest_framework import serializers
+import re
 from .models import User, VeterinarianProfile, VeterinarianReview
 
+PHONE_REGEX = re.compile(r'^[\+]?[\d\s\-\(\)]{7,20}$')
+LICENSE_REGEX = re.compile(r'^[A-Za-z0-9\-\/]{4,50}$')
+
 class UserSerializer(serializers.ModelSerializer):
+    avatar = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = ['id', 'email', 'full_name', 'avatar', 'role']
         read_only_fields = ['id', 'email', 'role']
 
+    def get_avatar(self, obj):
+        request = self.context.get('request')
+        if obj.avatar:
+            if request:
+                return request.build_absolute_uri(obj.avatar.url)
+            return obj.avatar.url
+        return None
+
 class VeterinarianProfileSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
-    
+    is_profile_complete = serializers.SerializerMethodField()
+    profile_image = serializers.SerializerMethodField()
+
     class Meta:
         model = VeterinarianProfile
         fields = [
-            'id', 'user', 'profile_image', 'license_number', 'status', 'years_experience', 
+            'id', 'user', 'profile_image', 'license_number', 'status', 'years_experience',
             'consultation_fee', 'bio', 'avg_rating', 'rating_count', 'total_consultations', 'location',
-            'specialization', 'clinic_name', 'clinic_address', 'phone_number', 'qualification'
+            'specialization', 'clinic_name', 'clinic_address', 'phone_number', 'qualification',
+            'account_number', 'is_profile_complete',
         ]
-        read_only_fields = ['id', 'user', 'status', 'avg_rating', 'rating_count', 'total_consultations']
+        read_only_fields = ['id', 'user', 'status', 'avg_rating', 'rating_count', 'total_consultations', 'is_profile_complete']
+
+    def get_is_profile_complete(self, obj):
+        return obj.is_profile_complete()
+
+    def get_profile_image(self, obj):
+        request = self.context.get('request')
+        if obj.profile_image:
+            if request:
+                return request.build_absolute_uri(obj.profile_image.url)
+            return obj.profile_image.url
+        return None
+
+
+class VeterinarianProfileCompletionSerializer(serializers.ModelSerializer):
+    profile_image = serializers.ImageField(required=False, allow_null=True)
+
+    class Meta:
+        model = VeterinarianProfile
+        fields = [
+            'profile_image', 'license_number', 'years_experience', 'consultation_fee', 'bio',
+            'location', 'specialization', 'clinic_name', 'clinic_address', 'phone_number',
+            'qualification', 'account_number',
+        ]
+
+    def _clean_text(self, value, field_label, min_len=1, max_len=None):
+        value = (value or '').strip()
+        if len(value) < min_len:
+            raise serializers.ValidationError(f'{field_label} is required.')
+        if max_len and len(value) > max_len:
+            raise serializers.ValidationError(f'{field_label} cannot exceed {max_len} characters.')
+        return value
+
+    def validate_license_number(self, value):
+        value = self._clean_text(value, 'License number', min_len=4, max_len=100)
+        if not LICENSE_REGEX.match(value):
+            raise serializers.ValidationError('Enter a valid license number (4-50 letters, numbers, hyphens, or slashes).')
+        qs = VeterinarianProfile.objects.filter(license_number__iexact=value)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError('This license number is already registered.')
+        return value
+
+    def validate_qualification(self, value):
+        return self._clean_text(value, 'Qualification', min_len=2, max_len=255)
+
+    def validate_specialization(self, value):
+        return self._clean_text(value, 'Specialization', min_len=2, max_len=255)
+
+    def validate_clinic_name(self, value):
+        return self._clean_text(value, 'Clinic name', min_len=2, max_len=255)
+
+    def validate_clinic_address(self, value):
+        return self._clean_text(value, 'Clinic address', min_len=10, max_len=2000)
+
+    def validate_location(self, value):
+        return self._clean_text(value, 'City/location', min_len=2, max_len=255)
+
+    def validate_phone_number(self, value):
+        value = self._clean_text(value, 'Phone number', min_len=7, max_len=20)
+        if not PHONE_REGEX.match(value):
+            raise serializers.ValidationError('Enter a valid phone number (7-20 digits, may include +, spaces, or dashes).')
+        return value
+
+    def validate_bio(self, value):
+        value = self._clean_text(value, 'Bio', min_len=20, max_len=1000)
+        return value
+
+    def validate_consultation_fee(self, value):
+        if value is None or float(value) <= 0:
+            raise serializers.ValidationError('Consultation fee must be greater than 0.')
+        if float(value) > 1000000:
+            raise serializers.ValidationError('Consultation fee is too high.')
+        return value
+
+    def validate_years_experience(self, value):
+        if value is None or value < 0:
+            raise serializers.ValidationError('Years of experience cannot be negative.')
+        if value > 60:
+            raise serializers.ValidationError('Please enter a realistic number of years of experience.')
+        return value
+
+    def validate_account_number(self, value):
+        return self._clean_text(value, 'Account number', min_len=5, max_len=50)
+
+    def validate_profile_image(self, value):
+        if not value:
+            return value
+        if hasattr(value, 'size') and value.size > 5 * 1024 * 1024:
+            raise serializers.ValidationError('Profile photo must be smaller than 5 MB.')
+        allowed = ('image/jpeg', 'image/png', 'image/webp', 'image/gif')
+        if hasattr(value, 'content_type') and value.content_type not in allowed:
+            raise serializers.ValidationError('Profile photo must be a JPEG, PNG, WebP, or GIF image.')
+        return value
+
+    def validate(self, attrs):
+        profile = self.instance
+        if not attrs.get('profile_image') and not (profile and profile.profile_image):
+            raise serializers.ValidationError({'profile_image': 'Profile photo is required.'})
+        return attrs
 
 
 class VeterinarianReviewSerializer(serializers.ModelSerializer):

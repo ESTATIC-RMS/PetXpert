@@ -48,12 +48,40 @@
   .page-btn:hover { border-color:var(--primary,#003fb1); color:var(--primary,#003fb1); }
   .page-btn.active { background:var(--primary,#003fb1); color:#fff; border-color:var(--primary,#003fb1); }
   .page-btn:disabled { opacity:0.4; cursor:not-allowed; }
+  
+  /* Responsive Orders Page */
+  @media (max-width: 640px) {
+    .stats-grid-responsive { grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .stat-card-o { padding: 1rem; }
+    .stat-icon-o { width: 36px; height: 36px; }
+    .stat-value-o { font-size: 1.25rem; }
+    .tab-pill { padding: 0.4rem 0.8rem; font-size: 0.7rem; }
+    .search-input-o { width: 100%; max-width: none; }
+    .order-table { display: none; }
+    .order-cards-mobile { display: block; }
+    .order-card-mobile { background: #fff; border: 1px solid #f3f4f6; border-radius: 12px; padding: 1rem; margin-bottom: 0.75rem; }
+    .order-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid #f3f4f6; }
+    .order-detail-row { display: flex; justify-content: space-between; padding: 0.4rem 0; font-size: 0.85rem; }
+    .order-detail-label { color: #6b7280; font-size: 0.75rem; }
+    .order-detail-value { font-weight: 600; color: #111827; }
+    .order-actions-mobile { margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid #f3f4f6; display: flex; gap: 0.5rem; }
+  }
+  @media (min-width: 641px) and (max-width: 1024px) {
+    .stats-grid-responsive { grid-template-columns: repeat(2, 1fr); }
+    .order-table { display: table; }
+    .order-cards-mobile { display: none; }
+  }
+  @media (min-width: 1025px) {
+    .stats-grid-responsive { grid-template-columns: repeat(4, 1fr); }
+    .order-table { display: table; }
+    .order-cards-mobile { display: none; }
+  }
 </style>
 {% endblock %}
 
 {% block content %}
 <div id="dashSkeleton">
-  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 stats-grid-responsive">
     <div class="skeleton h-24 rounded-2xl"></div><div class="skeleton h-24 rounded-2xl"></div>
     <div class="skeleton h-24 rounded-2xl"></div><div class="skeleton h-24 rounded-2xl"></div>
   </div>
@@ -75,7 +103,7 @@
     </div>
     <button onclick="document.getElementById('review-banner').classList.add('hidden')" class="text-yellow-500 hover:text-yellow-700"><i data-lucide="x" class="w-4 h-4"></i></button>
   </div>
-  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 stats-grid-responsive">
     <div class="stat-card-o"><div class="stat-icon-o bg-blue-50"><i data-lucide="banknote" class="w-5 h-5 text-blue-600"></i></div><div><p class="stat-label-o">Today's Revenue</p><p class="stat-value-o" id="s-revenue">Rs. 0</p><p class="stat-sub-o text-green-600" id="s-revenue-sub">--</p></div></div>
     <div class="stat-card-o"><div class="stat-icon-o bg-red-50"><i data-lucide="x-circle" class="w-5 h-5 text-red-500"></i></div><div><p class="stat-label-o">Cancelled Orders</p><p class="stat-value-o" id="s-pending">0</p><p class="stat-sub-o text-gray-400" id="s-pending-sub">--</p></div></div>
     <div class="stat-card-o"><div class="stat-icon-o bg-green-50"><i data-lucide="trending-up" class="w-5 h-5 text-green-600"></i></div><div><p class="stat-label-o">Avg Order Value</p><p class="stat-value-o" id="s-avg">Rs. 0</p><p class="stat-sub-o text-gray-400">Based on last 30 days</p></div></div>
@@ -98,7 +126,7 @@
         <button class="btn-sm btn-outline-sm" onclick="exportOrders()"><i data-lucide="download" class="w-3.5 h-3.5"></i> Export</button>
       </div>
     </div>
-    <div class="overflow-x-auto">
+    <div class="overflow-x-auto hidden md:block">
       <table class="order-table">
         <thead><tr>
           <th onclick="sortBy('id')">Order ID <span class="sort-arrow">↕</span></th>
@@ -112,6 +140,8 @@
         <tbody id="orders-tbody"><tr><td colspan="7" class="text-center py-12 text-gray-400">Loading...</td></tr></tbody>
       </table>
     </div>
+    <!-- Mobile Card View -->
+    <div id="orders-cards-mobile" class="order-cards-mobile md:hidden"></div>
     <div class="flex items-center justify-between p-4 border-t border-gray-100 flex-wrap gap-3">
       <span class="text-xs text-gray-400" id="pagination-info">Showing 0 orders</span>
       <div class="flex gap-1" id="pagination-btns"></div>
@@ -253,9 +283,44 @@ function renderOrders() {
   h += '<button class="page-btn" onclick="currentPage=Math.min(totalPages,currentPage+1);renderOrders()" '+(currentPage>=totalPages?'disabled':'')+'><i data-lucide="chevron-right" class="w-4 h-4"></i></button>';
   h += '<button class="page-btn" onclick="currentPage=totalPages;renderOrders()" '+(currentPage>=totalPages?'disabled':'')+'><i data-lucide="chevrons-right" class="w-4 h-4"></i></button>';
   btns.innerHTML = h; lucide.createIcons();
+  
+  // Render mobile cards
+  renderMobileCards(page);
 }
 
 function toggleDetail(rowId) { var row = document.getElementById(rowId); if (row) row.classList.toggle('hidden'); }
+
+function renderMobileCards(page) {
+  var mobileContainer = document.getElementById('orders-cards-mobile');
+  if (!page.length) {
+    mobileContainer.innerHTML = '<div class="text-center py-12 text-gray-400"><i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2 text-gray-300"></i><p class="font-semibold">No orders found</p></div>';
+    return;
+  }
+  
+  var isSeller = userRole === 'SELLER';
+  mobileContainer.innerHTML = page.map(function(o){
+    var customer = esc(o.buyer_name || (o.items && o.items.length ? o.items[0].product_name : 'N/A'));
+    var items = (o.items||[]).map(function(i){return esc(i.product_name);}).join(', ');
+    var nextLabel = {PAID:'Process',PROCESSING:'Ship',SHIPPED:'Deliver'}[o.status]||'View';
+    var canCancel = !isSeller && (o.status === 'PROCESSING' || o.status === 'PENDING_PAYMENT');
+    var actionBtn = isSeller
+      ? '<button onclick="updateOrder(\''+o.id+'\',\''+o.status+'\')" class="btn-sm btn-outline-sm flex-1">'+nextLabel+'</button>'
+      : (canCancel ? '<button onclick="cancelOrder(\''+o.id+'\')" class="btn-sm btn-cancel flex-1">Cancel</button>' : (o.status==='DELIVERED' ? '<button onclick="openReviewModal(\''+o.id+'\')" class="btn-sm btn-review flex-1">⭐ Review</button>' : '<span class="text-xs text-gray-400 flex-1">'+o.status.replace(/_/g,' ')+'</span>'));
+    
+    return '<div class="order-card-mobile">'+
+      '<div class="order-card-header">'+
+        '<span class="order-id">#ORD-'+o.id.slice(0,5).toUpperCase()+'</span>'+
+        '<span class="status-pill status-'+o.status+'">'+o.status.replace(/_/g,' ')+'</span>'+
+      '</div>'+
+      '<div class="order-detail-row"><span class="order-detail-label">Date</span><span class="order-detail-value text-xs">'+new Date(o.created_at).toLocaleDateString()+'</span></div>'+
+      '<div class="order-detail-row"><span class="order-detail-label">Customer</span><span class="order-detail-value">'+customer+'</span></div>'+
+      '<div class="order-detail-row"><span class="order-detail-label">Items</span><span class="order-detail-value text-xs text-right" style="text-align:right">'+items.substring(0,30)+(items.length>30?'...':'')+'</span></div>'+
+      '<div class="order-detail-row"><span class="order-detail-label">Total</span><span class="order-detail-value">Rs. '+o.total.toLocaleString()+'</span></div>'+
+      '<div class="order-actions-mobile">'+actionBtn+'</div>'+
+    '</div>';
+  }).join('');
+  lucide.createIcons();
+}
 
 async function cancelOrder(id) {
   if (!confirm('Cancel this order?')) return;

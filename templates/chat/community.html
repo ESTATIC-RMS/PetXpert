@@ -4,6 +4,7 @@
 {% block page_subtitle %}Connect with pet owners and veterinarians{% endblock %}
 
 {% block extra_head %}
+{% load static %}
 <style>
     .chat-container {
         position: relative;
@@ -11,6 +12,10 @@
         margin: -2rem;
         overflow: hidden;
         background: var(--background);
+        background-image: url('{% static "images/bg.png" %}');
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
         display: flex;
         flex-direction: column;
     }
@@ -153,7 +158,8 @@
         padding: 1rem 1.25rem 1.5rem;
         background: linear-gradient(to top, var(--background) 62%, rgba(250, 248, 255, 0));
         display: flex;
-        justify-content: center;
+        flex-direction: column;
+        align-items: center;
         z-index: 10;
     }
     
@@ -215,14 +221,24 @@
         transition: all 0.2s;
         flex-shrink: 0;
     }
-    
+
     .chat-send-btn:hover {
         background: #0847b7;
     }
-    
+
     .chat-send-btn:disabled {
         background: #e7e7f3;
         cursor: not-allowed;
+    }
+
+    #imageBtn {
+        background: transparent;
+        color: var(--on-surface-variant);
+    }
+
+    #imageBtn:hover {
+        background: var(--surface-container);
+        color: var(--primary);
     }
     
     
@@ -333,9 +349,9 @@
         color: #6b21a8;
     }
     
-    .role-admin {
-        background: #fef3c7;
-        color: #92400e;
+    .role-seller {
+        background: #ffedd5;
+        color: #c2410c;
     }
 </style>
 {% endblock %}
@@ -374,11 +390,26 @@
     
     <!-- Input Area -->
     <div class="chat-input-area">
+        <!-- Image Preview: compact thumbnail with an X overlay (ChatGPT style, above input) -->
+        <div id="imagePreviewContainer" class="hidden" style="display: none; align-items: center; justify-content: flex-start; width: min(768px, 100%); margin: 0 0 0.6rem 0; padding-left: 0.65rem;">
+            <div style="position: relative; display: inline-block;">
+                <img id="selectedImagePreview" src="" alt="Selected image" style="width: 56px; height: 56px; border-radius: 0.65rem; object-fit: cover; border: 1px solid var(--outline-variant); display: block;">
+                <button onclick="removeSelectedImage()" title="Remove image"
+                    style="position: absolute; top: -7px; right: -7px; width: 20px; height: 20px; border-radius: 9999px; background: #1f2937; color: #fff; display: inline-flex; align-items: center; justify-content: center; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.3); cursor: pointer;">
+                    <i data-lucide="x" class="w-3 h-3"></i>
+                </button>
+            </div>
+        </div>
+
         <div class="chat-input-container">
-            <textarea 
-                id="messageInput" 
-                class="chat-input" 
-                placeholder="Type your message here..." 
+            <input type="file" id="imageInput" accept="image/*" class="hidden" onchange="handleImageSelect(event)">
+            <button id="imageBtn" class="chat-send-btn" onclick="document.getElementById('imageInput').click()" title="Send Image">
+                <i data-lucide="image" class="w-5 h-5"></i>
+            </button>
+            <textarea
+                id="messageInput"
+                class="chat-input"
+                placeholder="Type your message here..."
                 rows="1"
             ></textarea>
             <button id="sendBtn" class="chat-send-btn" disabled>
@@ -406,6 +437,7 @@ let currentCursor = null;
 let hasMoreMessages = true;
 let isTyping = false;
 let typingTimeout = null;
+let selectedImage = null;
 
 // Auto-grow textarea function
 function autoGrow() {
@@ -441,6 +473,32 @@ async function initChat() {
     }
 }
 
+// Current user helpers (used by message rendering + WebSocket handlers)
+function getCurrentUserId() {
+    try {
+        const userData = JSON.parse(localStorage.getItem('user') || '{}');
+        return String(userData.id || '').toLowerCase();
+    } catch (error) {
+        return '';
+    }
+}
+
+function isOwnMessage(msg) {
+    const currentUserId = getCurrentUserId();
+    const senderId = String((msg.sender_info && msg.sender_info.id) || msg.sender || '').toLowerCase();
+    return Boolean(currentUserId && senderId && senderId === currentUserId);
+}
+
+function formatRoleLabel(role) {
+    const labels = {
+        PET_OWNER: 'Pet Owner',
+        VETERINARIAN: 'Veterinarian',
+        SELLER: 'Seller',
+        ADMIN: 'Admin',
+    };
+    return labels[role] || (role || '').replace(/_/g, ' ');
+}
+
 // Load messages via REST API
 async function loadMessages(cursor = null) {
     try {
@@ -455,9 +513,12 @@ async function loadMessages(cursor = null) {
             displayMessages(data.results, cursor === null);
             currentCursor = data.next_cursor;
             hasMoreMessages = data.has_more;
+        } else if (res.status !== 403) {
+            showToast(data.error || 'Failed to load messages', 'error');
         }
     } catch (error) {
         console.error('Failed to load messages:', error);
+        showToast('Failed to load messages', 'error');
     }
 }
 
@@ -469,16 +530,11 @@ function displayMessages(messages, clear = false) {
         container.innerHTML = '';
     }
     
-    const userData = JSON.parse(localStorage.getItem('user'));
-const currentUserEmail = userData.email.toLowerCase();
-
-messages.forEach(msg => {
-    const isOwn =
-        String(msg.sender).toLowerCase() === currentUserEmail;
+    messages.forEach(msg => {
+        const isOwn = isOwnMessage(msg);
         const messageHtml = createMessageHtml(msg, isOwn);
         container.insertAdjacentHTML('beforeend', messageHtml);
     });
-    console.log(localStorage.getItem('user'));
     
     // Scroll to bottom if loading new messages
     if (clear) {
@@ -518,8 +574,8 @@ function createMessageHtml(msg, isOwn) {
         attachmentsHtml += '</div>';
     }
     
-    const roleBadge = senderInfo.role ? 
-        `<span class="role-badge role-${senderInfo.role.toLowerCase()}">${senderInfo.role.replace('_', ' ')}</span>` : '';
+    const roleBadge = senderInfo.role ?
+        `<span class="role-badge role-${String(senderInfo.role).toLowerCase()}">${formatRoleLabel(senderInfo.role)}</span>` : '';
     
     const editedBadge = msg.is_edited ? 
         `<span class="message-edited">(edited)</span>` : '';
@@ -610,8 +666,6 @@ function connectWebSocket() {
 // Handle WebSocket messages
 function handleWebSocketMessage(data) {
     const container = document.getElementById('chatMessages');
-    const userData = JSON.parse(localStorage.getItem('user'));
-    const currentUserEmail = userData.email.toLowerCase();
     
     switch (data.type) {
         case 'connection_established':
@@ -622,8 +676,7 @@ function handleWebSocketMessage(data) {
             break;
             
         case 'new_message':
-            const isOwn =
-    String(data.message.sender).toLowerCase() === currentUserEmail;
+            const isOwn = isOwnMessage(data.message);
             const messageHtml = createMessageHtml(data.message, isOwn);
             container.insertAdjacentHTML('beforeend', messageHtml);
             container.scrollTop = container.scrollHeight;
@@ -638,8 +691,7 @@ function handleWebSocketMessage(data) {
         case 'message_updated':
             const existingMsg = document.querySelector(`[data-message-id="${data.message.id}"]`);
             if (existingMsg) {
-                const isOwn = String(data.message.sender) === currentUserId;
-                existingMsg.outerHTML = createMessageHtml(data.message, isOwn);
+                existingMsg.outerHTML = createMessageHtml(data.message, isOwnMessage(data.message));
                 lucide.createIcons();
             }
             break;
@@ -662,23 +714,116 @@ function handleWebSocketMessage(data) {
     }
 }
 
-// Send message via WebSocket
-function sendMessage() {
-    const input = document.getElementById('messageInput');
-    const content = input.value.trim();
-    
-    if (!content || !websocket || websocket.readyState !== WebSocket.OPEN) {
+// Handle image selection
+function handleImageSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+        showToast('Please select an image file', 'error');
         return;
     }
-    
-    websocket.send(JSON.stringify({
-        type: 'send_message',
-        content: content,
-        message_type: 'TEXT'
-    }));
-    
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+        showToast('Image size must be less than 5MB', 'error');
+        return;
+    }
+
+    selectedImage = file;
+
+    // Show preview
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const previewContainer = document.getElementById('imagePreviewContainer');
+        const previewImage = document.getElementById('selectedImagePreview');
+
+        previewImage.src = e.target.result;
+        previewContainer.style.display = 'flex';
+        previewContainer.classList.remove('hidden');
+        lucide.createIcons();
+    };
+    reader.readAsDataURL(file);
+
+    // Enable send button if there's content or image
+    const input = document.getElementById('messageInput');
+    document.getElementById('sendBtn').disabled = !input.value.trim() && !selectedImage;
+}
+
+// Remove selected image
+function removeSelectedImage() {
+    selectedImage = null;
+    document.getElementById('imageInput').value = '';
+    const previewContainer = document.getElementById('imagePreviewContainer');
+    previewContainer.style.display = 'none';
+    previewContainer.classList.add('hidden');
+    document.getElementById('selectedImagePreview').src = '';
+
+    const input = document.getElementById('messageInput');
+    document.getElementById('sendBtn').disabled = !input.value.trim();
+}
+
+// Send message via WebSocket
+async function sendMessage() {
+    const input = document.getElementById('messageInput');
+    const content = input.value.trim();
+
+    if (!content && !selectedImage) return;
+    if (!websocket || websocket.readyState !== WebSocket.OPEN) {
+        showToast('Not connected to chat', 'error');
+        return;
+    }
+
+    // If there's an image, upload it. The upload endpoint creates the IMAGE
+    // message + attachment and broadcasts it over the WebSocket, so we do NOT
+    // send a separate WS message here (that would create an empty duplicate).
+    if (selectedImage) {
+        const formData = new FormData();
+        formData.append('file', selectedImage);
+        if (content) formData.append('content', content);
+
+        try {
+            const token = localStorage.getItem('access_token');
+            const res = await fetch(`/api/chat/${COMMUNITY_GROUP_ID}/messages/upload/`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                body: formData
+            });
+
+            if (!res.ok) {
+                let errMsg = 'Failed to upload image';
+                try {
+                    const errData = await res.json();
+                    errMsg = errData.error || errMsg;
+                } catch (e) { /* ignore */ }
+                throw new Error(errMsg);
+            }
+        } catch (error) {
+            console.error('Image upload error:', error);
+            showToast(error.message || 'Failed to upload image', 'error');
+            return;
+        }
+    } else {
+        // Send text message only
+        websocket.send(JSON.stringify({
+            type: 'send_message',
+            content: content,
+            message_type: 'TEXT'
+        }));
+    }
+
+    // Reset input
     input.value = '';
     input.style.height = 'auto';
+    selectedImage = null;
+    document.getElementById('imageInput').value = '';
+    const previewContainer = document.getElementById('imagePreviewContainer');
+    previewContainer.style.display = 'none';
+    previewContainer.classList.add('hidden');
+    document.getElementById('selectedImagePreview').src = '';
     document.getElementById('sendBtn').disabled = true;
 }
 

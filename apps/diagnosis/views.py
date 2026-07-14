@@ -5,7 +5,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
-from rest_framework.permissions import IsAuthenticated
+from apps.core.permissions import IsPetOwner
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -40,7 +40,7 @@ def _create_notification(record):
 
 @method_decorator(csrf_exempt, name='dispatch')
 class DiagnoseImageView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsPetOwner]
     parser_classes = (MultiPartParser, FormParser, JSONParser)
 
     def post(self, request):
@@ -102,7 +102,7 @@ class DiagnoseImageView(APIView):
 
 @method_decorator(csrf_exempt, name='dispatch')
 class DiagnosisChatView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsPetOwner]
 
     def post(self, request):
         serializer = DiagnosisChatSerializer(data=request.data)
@@ -116,12 +116,21 @@ class DiagnosisChatView(APIView):
 class DiagnosisAssistantView(APIView):
     """Unified chat endpoint: optional image (runs detector) + optional text."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsPetOwner]
     parser_classes = (MultiPartParser, FormParser, JSONParser)
 
     def post(self, request):
         message = (request.data.get('message') or '').strip()
         image = request.FILES.get('image')
+        history = request.data.get('history')
+        if isinstance(history, str):
+            import json
+            try:
+                history = json.loads(history)
+            except json.JSONDecodeError:
+                history = None
+        if not isinstance(history, list):
+            history = None
 
         if not message and not image:
             return Response(
@@ -133,7 +142,7 @@ class DiagnosisAssistantView(APIView):
         if image is not None:
             detection = ml_engine.predict(image)
 
-        answer = llm_service.assistant_reply(message, detection)
+        answer = llm_service.assistant_reply(message, detection, history=history)
 
         summary = None
         if detection is not None:
@@ -150,7 +159,7 @@ class DiagnosisAssistantView(APIView):
 
 
 class DiagnosisHistoryView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsPetOwner]
 
     def get(self, request):
         records = DiagnosisRecord.objects.filter(
@@ -161,7 +170,7 @@ class DiagnosisHistoryView(APIView):
 
 
 class DiagnosisDetailView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsPetOwner]
 
     def get(self, request, diagnosis_id):
         try:

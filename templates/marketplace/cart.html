@@ -1,6 +1,6 @@
 {% extends "layouts/base.html" %}
 {% block page_title %}Shopping Cart{% endblock %}
-{% block page_subtitle %}<button onclick="history.back()" class="inline-flex items-center gap-1 text-gray-400 hover:text-[var(--primary)] font-bold text-sm mr-2 transition-colors"><i data-lucide="arrow-left" class="w-4 h-4"></i> Back</button> <a href="/marketplace/" class="text-[var(--primary)] hover:underline">Marketplace</a> > Shopping Cart{% endblock %}
+{% block page_subtitle %}Review and manage your selected items before checkout.{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -124,18 +124,26 @@ function updateSummary(subtotal, count) {
 async function removeItem(itemId) {
   var el = document.querySelector('[data-item="'+itemId+'"]');
   if (el) { el.style.opacity = '0'; el.style.transform = 'translateX(20px)'; setTimeout(function(){ el.remove(); }, 200); }
-  if (window.updateCartBadge) window.updateCartBadge();
   showToast('Removed','info');
   var token = localStorage.getItem('access_token');
-  try { await fetch(API+'/cart/?item_id='+itemId, {method:'DELETE', headers:{'Authorization':'Bearer '+token}}); loadCart(); } catch(e) {}
+  try { 
+    await fetch(API+'/cart/?item_id='+itemId, {method:'DELETE', headers:{'Authorization':'Bearer '+token}}); 
+    loadCart(); 
+    // Update cart badge after successful removal
+    if (window.updateCartBadge) window.updateCartBadge();
+  } catch(e) {}
 }
 
 async function updateQty(itemId, qty) {
   if (qty < 1) { removeItem(itemId); return; }
   document.getElementById('qty-'+itemId).textContent = qty;
-  if (window.updateCartBadge) window.updateCartBadge();
   var token = localStorage.getItem('access_token');
-  try { await fetch(API+'/cart/', {method:'PATCH', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}, body:JSON.stringify({item_id:itemId, quantity:qty})}); loadCart(); } catch(e) {}
+  try { 
+    await fetch(API+'/cart/', {method:'PATCH', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}, body:JSON.stringify({item_id:itemId, quantity:qty})}); 
+    loadCart(); 
+    // Update cart badge after successful update
+    if (window.updateCartBadge) window.updateCartBadge();
+  } catch(e) {}
 }
 
 loadCart();

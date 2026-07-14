@@ -4,13 +4,14 @@ from .views import (
     UserProfileView, VeterinarianProfileImageUploadView, VeterinarianProfileImageDeleteView,
     VeterinarianProfileUpdateView, VeterinarianListView,
     VeterinarianReviewListCreateView, VeterinarianReviewDetailView,
-    UserReviewListView, AppointmentReviewView
+    UserReviewListView, AppointmentReviewView, ForgotPasswordView
 )
 
 urlpatterns = [
     # Authentication
     path('signup/', SignupView.as_view(), name='signup'),
     path('signin/', SigninView.as_view(), name='signin'),
+    path('forgot-password/', ForgotPasswordView.as_view(), name='forgot_password'),
     
     # User Profile
     path('profile/', UserProfileView.as_view(), name='user_profile'),

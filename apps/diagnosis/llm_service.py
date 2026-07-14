@@ -5,6 +5,8 @@ SYSTEM_PROMPT = (
     'You are PetXpert AI, a careful veterinary assistant. Provide concise, practical '
     'education for pet owners, avoid definitive medical claims, and recommend a licensed '
     'veterinarian for urgent symptoms or worsening conditions. '
+    'When continuing a conversation, do not re-introduce yourself or repeat your capabilities. '
+    'Respond directly to the user\'s latest message. '
     'IMPORTANT: Keep ALL responses concise and to the point. Maximum 100-150 words per response. '
     'Use bullet points for recommendations. Avoid lengthy explanations. '
     'IMPORTANT: You must ONLY answer questions related to pets, animals, and veterinary care. '
@@ -161,8 +163,14 @@ Return the response in clean HTML format using:
     ], temperature=0.3)
 
 
-def _generate_error_html(error_message):
+def _generate_error_html(error_message, include_tip=True):
     """Generate structured HTML error message."""
+    tip_block = ''
+    if include_tip:
+        tip_block = """
+    <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #FECACA;">
+        <p style="color: #991B1B; margin: 0; font-size: 13px;">💡 Please try again or consult a veterinarian if symptoms persist.</p>
+    </div>"""
     return f"""<div style="background: #FEF2F2; border-left: 4px solid #EF4444; padding: 16px; border-radius: 8px; margin: 16px 0;">
     <div style="display: flex; align-items: center; gap: 12px;">
         <span style="font-size: 24px;">⚠️</span>
@@ -170,14 +178,19 @@ def _generate_error_html(error_message):
             <h3 style="color: #DC2626; margin: 0 0 8px 0; font-size: 16px;">Analysis Error</h3>
             <p style="color: #7F1D1D; margin: 0; font-size: 14px;">{error_message}</p>
         </div>
-    </div>
-    <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #FECACA;">
-        <p style="color: #991B1B; margin: 0; font-size: 13px;">💡 Please try again or consult a veterinarian if symptoms persist.</p>
-    </div>
+    </div>{tip_block}
 </div>"""
 
 
-def assistant_reply(user_message, detection=None):
+def _strip_html(value):
+    if not value:
+        return ''
+    import re
+    text = re.sub(r'<[^>]+>', ' ', str(value))
+    return re.sub(r'\s+', ' ', text).strip()
+
+
+def assistant_reply(user_message, detection=None, history=None):
     """Single entry point for the chat assistant.
 
     When ``detection`` is provided (image was uploaded) the model's findings are
@@ -188,10 +201,14 @@ def assistant_reply(user_message, detection=None):
     owner_line = f"Owner's message: {user_message or '(no text provided)'}"
 
     if detection is None:
-        return _chat_completion([
-            {'role': 'system', 'content': SYSTEM_PROMPT},
-            {'role': 'user', 'content': user_message},
-        ], temperature=0.4)
+        messages = [{'role': 'system', 'content': SYSTEM_PROMPT}]
+        for item in history or []:
+            role = item.get('role')
+            content = _strip_html(item.get('content') or item.get('text') or '')
+            if role in ('user', 'assistant') and content:
+                messages.append({'role': role, 'content': content})
+        messages.append({'role': 'user', 'content': user_message})
+        return _chat_completion(messages, temperature=0.4)
 
     similarity = detection.get('similarity')
     similarity_text = f'{similarity:.3f}' if isinstance(similarity, (int, float)) else 'n/a'
@@ -203,7 +220,7 @@ def assistant_reply(user_message, detection=None):
     
     elif not detection.get('is_dog'):
         error_msg = 'The attached image does not appear to contain a dog. Our detector currently supports dogs only.'
-        html_response = _generate_error_html(error_msg)
+        html_response = _generate_error_html(error_msg, include_tip=False)
         return html_response
     
     else:

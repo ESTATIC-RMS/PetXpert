@@ -3,7 +3,10 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, PermissionDenied
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
+from apps.core.permissions import IsCommunityMember
 from .models import ChatGroup, Message, Attachment
 from .serializers import (
     MessageSerializer, MessageCreateSerializer, MessageEditSerializer, ChatGroupSerializer
@@ -12,7 +15,7 @@ from .services import create_message, edit_message, delete_message, get_message_
 
 
 class MessageViewSet(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsCommunityMember]
     parser_classes = [MultiPartParser, FormParser]
 
     def list(self, request, group_id=None):
@@ -100,51 +103,73 @@ class MessageViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['post'], url_path='upload')
     def upload_file(self, request, group_id=None):
-        """Upload a file attachment."""
+        """Upload an image, create an IMAGE message with it, and broadcast it.
+
+        Because ``Attachment`` requires a parent ``Message``, the message and the
+        attachment are created together here, then broadcast over the WebSocket
+        group so all connected clients (including the sender) render it in real time.
+        """
         try:
             group = ChatGroup.objects.get(id=group_id, is_active=True)
         except ChatGroup.DoesNotExist:
             return Response({'error': 'Chat group not found'}, status=status.HTTP_404_NOT_FOUND)
-        
+
         file = request.FILES.get('file')
         if not file:
             return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         # Validate file type / extension
         import os
         allowed_extensions = ['.jpg', '.jpeg', '.png']
         allowed_content_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/pjpeg', 'image/x-png']
-        
+
         _, ext = os.path.splitext(file.name.lower())
         is_valid = ext in allowed_extensions
         if file.content_type:
             content_type_lower = file.content_type.lower()
             is_valid = is_valid and (content_type_lower in allowed_content_types or content_type_lower.startswith('image/'))
-            
+
         if not is_valid:
             return Response(
                 {'error': 'Only JPG, JPEG, and PNG images are allowed.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-            
-        # Create attachment
-        attachment = Attachment.objects.create(
-            file_name=file.name,
-            file_type=file.content_type,
-            file_size=file.size,
-            file=file
-        )
-        
-        return Response({
-            'id': str(attachment.id),
-            'file_name': attachment.file_name,
-            'file_type': attachment.file_type,
-            'file_size': attachment.file_size,
-            'file_url': attachment.file.url
-        }, status=status.HTTP_201_CREATED)
+
+        # Create the IMAGE message together with its attachment.
+        content = (request.data.get('content') or '').strip()
+        try:
+            message = create_message(
+                user=request.user,
+                group=group,
+                content=content or None,
+                message_type='IMAGE',
+                attachments=[{
+                    'file_name': file.name,
+                    'file_type': file.content_type or 'image/jpeg',
+                    'file_size': file.size,
+                    'file': file,
+                }],
+            )
+        except ValidationError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        message_data = MessageSerializer(message, context={'request': request}).data
+
+        # Broadcast to the WebSocket group so everyone (incl. the sender) sees it live.
+        try:
+            channel_layer = get_channel_layer()
+            if channel_layer is not None:
+                async_to_sync(channel_layer.group_send)(
+                    f'group_{group_id}',
+                    {'type': 'new_message', 'message': message_data}
+                )
+        except Exception:
+            pass
+
+        return Response(message_data, status=status.HTTP_201_CREATED)
 
 
 class ChatGroupViewSet(viewsets.ReadOnlyModelViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsCommunityMember]
     serializer_class = ChatGroupSerializer
     queryset = ChatGroup.objects.filter(is_active=True)

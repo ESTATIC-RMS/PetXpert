@@ -1,0 +1,350 @@
+/**
+ * PetXpert Admin custom styles — extends django-unfold with brand identity.
+ * Primary brand color: #003FB1
+ */
+
+/* ─── Typography ─────────────────────────────────────────────────────────── */
+.petxpert-admin-loaded {
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+/* ─── Dashboard stat cards ───────────────────────────────────────────────── */
+.px-stat-card {
+    background: var(--color-base-50, #faf8ff);
+    border: 1px solid var(--color-base-200, #e2e8f0);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+html.dark .px-stat-card {
+    background: var(--color-base-900, #1e293b);
+    border-color: var(--color-base-700, #334155);
+}
+
+.px-stat-card:hover {
+    box-shadow: 0 8px 24px rgba(0, 63, 177, 0.1);
+    transform: translateY(-2px);
+}
+
+.px-stat-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--color-primary-600, #003fb1);
+    letter-spacing: -0.02em;
+}
+
+html.dark .px-stat-value {
+    color: var(--color-primary-400, #5a7fe8);
+}
+
+.px-stat-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-base-500, #64748b);
+    margin-bottom: 0.35rem;
+}
+
+.px-stat-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* ─── Dashboard panels ───────────────────────────────────────────────────── */
+.px-panel {
+    background: var(--color-base-50, #fff);
+    border: 1px solid var(--color-base-200, #e2e8f0);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+html.dark .px-panel {
+    background: var(--color-base-900, #1e293b);
+    border-color: var(--color-base-700, #334155);
+}
+
+.px-panel-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--color-base-200, #e2e8f0);
+    font-weight: 700;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+html.dark .px-panel-header {
+    border-color: var(--color-base-700, #334155);
+}
+
+.px-panel-body { padding: 0; }
+
+.px-panel-body table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8125rem;
+}
+
+.px-panel-body th {
+    position: sticky;
+    top: 0;
+    background: var(--color-base-100, #f1f5f9);
+    padding: 0.625rem 1rem;
+    text-align: left;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-base-500, #64748b);
+    z-index: 1;
+}
+
+html.dark .px-panel-body th {
+    background: var(--color-base-800, #1e293b);
+}
+
+.px-panel-body td {
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--color-base-100, #f1f5f9);
+}
+
+html.dark .px-panel-body td {
+    border-color: var(--color-base-800, #1e293b);
+}
+
+.px-panel-body tr:hover td {
+    background: var(--color-primary-50, #eef3ff);
+}
+
+html.dark .px-panel-body tr:hover td {
+    background: rgba(0, 63, 177, 0.08);
+}
+
+/* ─── Status badges ──────────────────────────────────────────────────────── */
+.px-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.px-badge-success { background: #dcfce7; color: #166534; }
+.px-badge-warning { background: #fef3c7; color: #92400e; }
+.px-badge-danger  { background: #fee2e2; color: #991b1b; }
+.px-badge-info    { background: #dbeafe; color: #1e40af; }
+.px-badge-neutral { background: #f1f5f9; color: #475569; }
+
+html.dark .px-badge-success { background: rgba(22, 101, 52, 0.2); color: #86efac; }
+html.dark .px-badge-warning { background: rgba(146, 64, 14, 0.2); color: #fcd34d; }
+html.dark .px-badge-danger  { background: rgba(153, 27, 27, 0.2); color: #fca5a5; }
+html.dark .px-badge-info    { background: rgba(30, 64, 175, 0.2); color: #93c5fd; }
+
+/* ─── Quick action buttons ─────────────────────────────────────────────────── */
+.px-quick-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 1rem;
+    border-radius: 10px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.15s ease;
+    border: 1px solid var(--color-base-200, #e2e8f0);
+    color: var(--color-base-700, #334155);
+    background: var(--color-base-50, #fff);
+}
+
+html.dark .px-quick-btn {
+    background: var(--color-base-800, #1e293b);
+    border-color: var(--color-base-700, #334155);
+    color: var(--color-base-200, #e2e8f0);
+}
+
+.px-quick-btn:hover {
+    background: var(--color-primary-600, #003fb1);
+    border-color: var(--color-primary-600, #003fb1);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(0, 63, 177, 0.25);
+}
+
+.px-quick-btn-primary {
+    background: var(--color-primary-600, #003fb1);
+    border-color: var(--color-primary-600, #003fb1);
+    color: #fff;
+}
+
+/* ─── Welcome banner ─────────────────────────────────────────────────────── */
+.px-welcome {
+    background: linear-gradient(135deg, #003fb1 0%, #1a56db 60%, #5a7fe8 100%);
+    border-radius: 16px;
+    padding: 1.75rem 2rem;
+    color: #fff;
+    margin-bottom: 1.5rem;
+}
+
+.px-welcome h2 {
+    font-size: 1.375rem;
+    font-weight: 700;
+    margin: 0 0 0.25rem;
+    letter-spacing: -0.02em;
+}
+
+.px-welcome p {
+    opacity: 0.85;
+    font-size: 0.875rem;
+    margin: 0;
+}
+
+/* ─── Sidebar brand logo ─────────────────────────────────────────────────── */
+.px-sidebar-brand {
+    padding: 1rem 1.25rem;
+    min-height: 65px;
+}
+
+/* ─── Dashboard edit buttons ─────────────────────────────────────────────── */
+.px-edit-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-decoration: none;
+    color: var(--color-primary-600, #003fb1);
+    background: var(--color-primary-50, #eef3ff);
+    border: 1px solid var(--color-primary-100, #d4dcff);
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.px-edit-btn:hover {
+    background: var(--color-primary-600, #003fb1);
+    border-color: var(--color-primary-600, #003fb1);
+    color: #fff;
+}
+
+html.dark .px-edit-btn {
+    background: rgba(0, 63, 177, 0.15);
+    border-color: rgba(0, 63, 177, 0.3);
+    color: var(--color-primary-400, #5a7fe8);
+}
+
+html.dark .px-edit-btn:hover {
+    background: var(--color-primary-600, #003fb1);
+    color: #fff;
+}
+
+.px-panel-body td.text-right {
+    text-align: right;
+}
+
+.px-panel-body th.text-right {
+    text-align: right;
+}
+
+/* ─── Changelist inline edit hint ────────────────────────────────────────── */
+#changelist-form .action-counter,
+.change-list .paginator {
+    font-size: 0.8125rem;
+}
+
+#result_list {
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--color-base-200, #e2e8f0);
+}
+
+#result_list thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.petxpert-table-row {
+    transition: background-color 0.15s ease;
+}
+
+/* ─── Form field polish ──────────────────────────────────────────────────── */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="url"],
+input[type="date"],
+input[type="datetime-local"],
+textarea,
+select {
+    border-radius: 10px !important;
+}
+
+/* ─── Toast notifications ────────────────────────────────────────────────── */
+.messagelist li.petxpert-toast {
+    border-radius: 12px;
+    padding: 0.75rem 1.25rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    animation: px-toast-in 0.3s ease forwards;
+    transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.messagelist li.petxpert-toast-hide {
+    opacity: 0;
+    transform: translateX(20px);
+}
+
+@keyframes px-toast-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.px-empty {
+    padding: 2.5rem 1rem;
+    text-align: center;
+    color: var(--color-base-400, #94a3b8);
+    font-size: 0.875rem;
+}
+
+.px-error-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    text-align: center;
+    padding: 2rem;
+}
+
+.px-error-code {
+    font-size: 4rem;
+    font-weight: 800;
+    color: var(--color-primary-600, #003fb1);
+    line-height: 1;
+}
+
+.px-error-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0.5rem 0;
+}
+
+.px-error-desc {
+    color: var(--color-base-500, #64748b);
+    font-size: 0.875rem;
+    max-width: 28rem;
+    margin-bottom: 1.5rem;
+}

@@ -46,7 +46,14 @@
     .med-table th { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #9ca3af; padding: 0.5rem; border-bottom: 1.5px solid #f1f5f9; }
     .med-table td { font-size: 13px; color: #334155; padding: 0.75rem 0.5rem; border-bottom: 1px solid #f1f5f9; }
 
-
+    /* Validation styles */
+    .invalid { border-color: #ef4444 !important; }
+    .valid { border-color: #10b981 !important; }
+    .field-error { display: none; color: #ef4444; font-size: 11px; font-weight: 600; margin-top: 4px; }
+    .field-error.show { display: block; }
+    .char-count { font-size: 10px; color: #9ca3af; text-align: right; margin-top: 4px; }
+    .char-count.warning { color: #f59e0b; }
+    .char-count.error { color: #ef4444; }
 </style>
 {% endblock %}
 
@@ -114,31 +121,37 @@
             <!-- Appointment Select & Valid Until Date -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Select Appointment</label>
-                    <select id="appointmentSelect" required
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Select Appointment <span class="text-red-500">*</span></label>
+                    <select id="appointmentSelect" required onchange="validateAppointment()"
                             class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:bg-white transition-all">
                         <option value="" disabled selected>Loading completed appointments...</option>
                     </select>
+                    <p class="field-error" id="err-appointment">Please select a completed appointment</p>
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Valid Until (Optional)</label>
-                    <input type="date" id="validUntilInput"
+                    <input type="date" id="validUntilInput" onchange="validateValidUntil()"
                            class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:bg-white transition-all">
+                    <p class="field-error" id="err-validUntil">Date cannot be in the past</p>
                 </div>
             </div>
 
             <!-- Diagnosis Text -->
             <div>
-                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Diagnosis / Medical Findings</label>
-                <textarea id="diagnosisInput" rows="3" required placeholder="Describe findings, diagnosis, and condition details..."
-                          class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:bg-white transition-all resize-none"></textarea>
+                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Diagnosis / Medical Findings <span class="text-red-500">*</span></label>
+                <textarea id="diagnosisInput" rows="3" required minlength="5" maxlength="5000" placeholder="Describe findings, diagnosis, and condition details..."
+                          class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:bg-white transition-all resize-none" oninput="validateDiagnosis()"></textarea>
+                <p class="char-count" id="diagnosis-count">0/5000</p>
+                <p class="field-error" id="err-diagnosis">Diagnosis must be at least 5 characters</p>
             </div>
 
             <!-- Instructions Text -->
             <div>
-                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">General Instructions / Advice</label>
-                <textarea id="instructionsInput" rows="3" required placeholder="Describe dietary restrictions, hygiene guidance, follow-up recommendations..."
-                          class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:bg-white transition-all resize-none"></textarea>
+                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">General Instructions / Advice <span class="text-red-500">*</span></label>
+                <textarea id="instructionsInput" rows="3" required minlength="5" maxlength="5000" placeholder="Describe dietary restrictions, hygiene guidance, follow-up recommendations..."
+                          class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:bg-white transition-all resize-none" oninput="validateInstructions()"></textarea>
+                <p class="char-count" id="instructions-count">0/5000</p>
+                <p class="field-error" id="err-instructions">Instructions must be at least 5 characters</p>
             </div>
 
             <!-- Medicines Section -->
@@ -225,33 +238,38 @@ function addMedicationRow(data = {}) {
             
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div class="lg:col-span-2">
-                    <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Medicine Name</label>
-                    <input type="text" name="medicine_name" required placeholder="e.g. Amoxicillin, Meloxicam" value="${data.medicine_name || ''}"
-                           class="med-input w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-[var(--primary)] transition-all">
+                    <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Medicine Name <span class="text-red-500">*</span></label>
+                    <input type="text" name="medicine_name" required minlength="2" maxlength="200" placeholder="e.g. Amoxicillin, Meloxicam" value="${data.medicine_name || ''}"
+                           class="med-input w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-[var(--primary)] transition-all" oninput="validateMedicineField(this, 'name')">
+                    <p class="field-error med-error">Medicine name must be 2-200 characters</p>
                 </div>
                 <div>
-                    <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Dosage Instruction</label>
-                    <input type="text" name="dosage" required placeholder="e.g. 1 tab twice a day" value="${data.dosage || ''}"
-                           class="med-input w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-[var(--primary)] transition-all">
+                    <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Dosage Instruction <span class="text-red-500">*</span></label>
+                    <input type="text" name="dosage" required minlength="2" maxlength="200" placeholder="e.g. 1 tab twice a day" value="${data.dosage || ''}"
+                           class="med-input w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-[var(--primary)] transition-all" oninput="validateMedicineField(this, 'dosage')">
+                    <p class="field-error med-error">Dosage must be 2-200 characters</p>
                 </div>
                 <div class="grid grid-cols-2 gap-2">
                     <div>
-                        <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Qty</label>
-                        <input type="number" name="quantity" required min="1" placeholder="10" value="${data.quantity || ''}"
-                               class="med-input w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-[var(--primary)] transition-all">
+                        <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Qty <span class="text-red-500">*</span></label>
+                        <input type="number" name="quantity" required min="1" max="9999" placeholder="10" value="${data.quantity || ''}"
+                               class="med-input w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-[var(--primary)] transition-all" oninput="validateMedicineField(this, 'quantity')">
+                        <p class="field-error med-error">Qty must be 1-9999</p>
                     </div>
                     <div>
-                        <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Days</label>
-                        <input type="number" name="duration_days" required min="1" placeholder="7" value="${data.duration_days || ''}"
-                               class="med-input w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-[var(--primary)] transition-all">
+                        <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Days <span class="text-red-500">*</span></label>
+                        <input type="number" name="duration_days" required min="1" max="365" placeholder="7" value="${data.duration_days || ''}"
+                               class="med-input w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-[var(--primary)] transition-all" oninput="validateMedicineField(this, 'duration')">
+                        <p class="field-error med-error">Duration must be 1-365 days</p>
                     </div>
                 </div>
             </div>
             
             <div>
                 <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Notes (Optional)</label>
-                <input type="text" name="notes" placeholder="Take after meal, store in a cool place..." value="${data.notes || ''}"
-                       class="med-input w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-[var(--primary)] transition-all">
+                <input type="text" name="notes" maxlength="500" placeholder="Take after meal, store in a cool place..." value="${data.notes || ''}"
+                       class="med-input w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-[var(--primary)] transition-all" oninput="validateMedicineField(this, 'notes')">
+                <p class="char-count med-count">0/500</p>
             </div>
         </div>
     `;
@@ -267,6 +285,154 @@ function removeMedicationRow(id) {
     }
 }
 
+// Helper function to set field validation status
+function setFieldStatus(fieldId, isValid) {
+    const field = document.getElementById(fieldId);
+    const errorEl = document.getElementById('err-' + fieldId);
+    if (field) {
+        field.classList.remove('invalid', 'valid');
+        field.classList.add(isValid ? 'valid' : 'invalid');
+    }
+    if (errorEl) {
+        errorEl.classList.toggle('show', !isValid);
+    }
+    return isValid;
+}
+
+// Helper function to update character count
+function updateCharCount(fieldId, countId, maxLength) {
+    const field = document.getElementById(fieldId);
+    const countEl = document.getElementById(countId);
+    if (!field || !countEl) return;
+    
+    const current = field.value.length;
+    const percentage = (current / maxLength) * 100;
+    
+    countEl.textContent = `${current}/${maxLength}`;
+    countEl.classList.remove('warning', 'error');
+    
+    if (percentage >= 90) {
+        countEl.classList.add('error');
+    } else if (percentage >= 75) {
+        countEl.classList.add('warning');
+    }
+}
+
+// Validate appointment selection
+function validateAppointment() {
+    const field = document.getElementById('appointmentSelect');
+    const isValid = field.value !== '';
+    return setFieldStatus('appointmentSelect', isValid);
+}
+
+// Validate valid until date
+function validateValidUntil() {
+    const field = document.getElementById('validUntilInput');
+    const value = field.value;
+    
+    if (!value) {
+        field.classList.remove('invalid', 'valid');
+        document.getElementById('err-validUntil').classList.remove('show');
+        return true;
+    }
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const chosen = new Date(value + 'T00:00:00');
+    const isValid = chosen >= today;
+    
+    return setFieldStatus('validUntilInput', isValid);
+}
+
+// Validate diagnosis
+function validateDiagnosis() {
+    const field = document.getElementById('diagnosisInput');
+    const value = field.value.trim();
+    const isValid = value.length >= 5;
+    updateCharCount('diagnosisInput', 'diagnosis-count', 5000);
+    return setFieldStatus('diagnosisInput', isValid);
+}
+
+// Validate instructions
+function validateInstructions() {
+    const field = document.getElementById('instructionsInput');
+    const value = field.value.trim();
+    const isValid = value.length >= 5;
+    updateCharCount('instructionsInput', 'instructions-count', 5000);
+    return setFieldStatus('instructionsInput', isValid);
+}
+
+// Validate medicine field
+function validateMedicineField(field, type) {
+    const value = field.value.trim();
+    const parent = field.closest('div');
+    const errorEl = parent.querySelector('.med-error');
+    const countEl = parent.querySelector('.med-count');
+    
+    let isValid = true;
+    
+    switch(type) {
+        case 'name':
+            isValid = value.length >= 2 && value.length <= 200;
+            break;
+        case 'dosage':
+            isValid = value.length >= 2 && value.length <= 200;
+            break;
+        case 'quantity':
+            const qty = parseInt(value, 10);
+            isValid = !isNaN(qty) && qty >= 1 && qty <= 9999;
+            break;
+        case 'duration':
+            const days = parseInt(value, 10);
+            isValid = !isNaN(days) && days >= 1 && days <= 365;
+            break;
+        case 'notes':
+            if (countEl) {
+                const current = value.length;
+                const percentage = (current / 500) * 100;
+                countEl.textContent = `${current}/500`;
+                countEl.classList.remove('warning', 'error');
+                if (percentage >= 90) {
+                    countEl.classList.add('error');
+                } else if (percentage >= 75) {
+                    countEl.classList.add('warning');
+                }
+            }
+            field.classList.remove('invalid', 'valid');
+            if (errorEl) errorEl.classList.remove('show');
+            return true;
+    }
+    
+    field.classList.remove('invalid', 'valid');
+    field.classList.add(isValid ? 'valid' : 'invalid');
+    if (errorEl) {
+        errorEl.classList.toggle('show', !isValid);
+    }
+    
+    return isValid;
+}
+
+// Check for duplicate medicine names
+function checkDuplicateMedicines() {
+    const medRows = document.querySelectorAll('#medicationsContainer > div');
+    const medicineNames = [];
+    let hasDuplicates = false;
+    
+    medRows.forEach((row) => {
+        const medicine_name = row.querySelector('[name="medicine_name"]').value.trim().toLowerCase();
+        if (medicine_name) {
+            if (medicineNames.includes(medicine_name)) {
+                hasDuplicates = true;
+                row.querySelector('[name="medicine_name"]').classList.add('invalid');
+            } else {
+                medicineNames.push(medicine_name);
+            }
+        }
+    });
+    
+    return !hasDuplicates;
+}
+
 // Open/Close Modal functions
 function openWritePrescModal() {
     document.getElementById('writePrescModal').classList.remove('hidden');
@@ -276,8 +442,54 @@ function openWritePrescModal() {
     document.getElementById('writePrescForm').reset();
     document.getElementById('medicationsContainer').innerHTML = '';
     addMedicationRow();
+    document.getElementById('validUntilInput').min = new Date().toISOString().split('T')[0];
+    
+    // Clear validation states
+    document.querySelectorAll('.invalid, .valid').forEach(el => el.classList.remove('invalid', 'valid'));
+    document.querySelectorAll('.field-error').forEach(el => el.classList.remove('show'));
     
     loadCompletedAppointmentsSelect();
+}
+
+function validatePrescriptionForm() {
+    let valid = true;
+    
+    // Validate main form fields
+    if (!validateAppointment()) valid = false;
+    if (!validateValidUntil()) valid = false;
+    if (!validateDiagnosis()) valid = false;
+    if (!validateInstructions()) valid = false;
+    
+    // Validate all medicine fields
+    const medRows = document.querySelectorAll('#medicationsContainer > div');
+    if (!medRows.length) {
+        showToast('Add at least one medicine.', 'error');
+        return false;
+    }
+    
+    medRows.forEach((row) => {
+        const nameField = row.querySelector('[name="medicine_name"]');
+        const dosageField = row.querySelector('[name="dosage"]');
+        const qtyField = row.querySelector('[name="quantity"]');
+        const durationField = row.querySelector('[name="duration_days"]');
+        
+        if (!validateMedicineField(nameField, 'name')) valid = false;
+        if (!validateMedicineField(dosageField, 'dosage')) valid = false;
+        if (!validateMedicineField(qtyField, 'quantity')) valid = false;
+        if (!validateMedicineField(durationField, 'duration')) valid = false;
+    });
+    
+    // Check for duplicate medicines
+    if (!checkDuplicateMedicines()) {
+        showToast('Duplicate medicine names detected.', 'error');
+        valid = false;
+    }
+    
+    if (!valid) {
+        showToast('Please fix the errors before submitting.', 'error');
+    }
+    
+    return valid;
 }
 
 function closeWritePrescModal() {
@@ -509,6 +721,12 @@ async function loadPrescriptions() {
 // Submit prescription form
 document.getElementById('writePrescForm').addEventListener('submit', async (e) => {
     e.preventDefault();
+
+    const validationErrors = validatePrescriptionForm();
+    if (validationErrors.length) {
+        showToast(validationErrors[0], 'error');
+        return;
+    }
     
     const submitBtn = document.getElementById('submitPrescBtn');
     const origHtml = submitBtn.innerHTML;
@@ -517,8 +735,8 @@ document.getElementById('writePrescForm').addEventListener('submit', async (e) =
     lucide.createIcons();
     
     const appointment_id = document.getElementById('appointmentSelect').value;
-    const diagnosis_text = document.getElementById('diagnosisInput').value;
-    const instructions = document.getElementById('instructionsInput').value;
+    const diagnosis_text = document.getElementById('diagnosisInput').value.trim();
+    const instructions = document.getElementById('instructionsInput').value.trim();
     const valid_until_val = document.getElementById('validUntilInput').value;
     const valid_until = valid_until_val || null;
 
@@ -529,22 +747,12 @@ document.getElementById('writePrescForm').addEventListener('submit', async (e) =
     medRows.forEach(row => {
         const medicine_name = row.querySelector('[name="medicine_name"]').value.trim();
         const dosage = row.querySelector('[name="dosage"]').value.trim();
-        const quantity = parseInt(row.querySelector('[name="quantity"]').value);
-        const duration_days = parseInt(row.querySelector('[name="duration_days"]').value);
+        const quantity = parseInt(row.querySelector('[name="quantity"]').value, 10);
+        const duration_days = parseInt(row.querySelector('[name="duration_days"]').value, 10);
         const notes = row.querySelector('[name="notes"]').value.trim();
         
-        if (medicine_name && dosage && quantity > 0 && duration_days > 0) {
-            items.push({ medicine_name, dosage, quantity, duration_days, notes });
-        }
+        items.push({ medicine_name, dosage, quantity, duration_days, notes });
     });
-
-    if (items.length === 0) {
-        showToast('Please prescribe at least one valid medication.', 'error');
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = origHtml;
-        lucide.createIcons();
-        return;
-    }
 
     const payload = {
         appointment: appointment_id,

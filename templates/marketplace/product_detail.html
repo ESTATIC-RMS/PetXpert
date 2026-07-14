@@ -1,6 +1,6 @@
 {% extends "layouts/base.html" %}
 {% block page_title %}Product Details{% endblock %}
-{% block page_subtitle %}<button onclick="history.back()" class="inline-flex items-center gap-1 text-gray-400 hover:text-[var(--primary)] font-bold text-sm mr-2 transition-colors"><i data-lucide="arrow-left" class="w-4 h-4"></i> Back</button> <a href="/marketplace/" class="text-[var(--primary)] hover:underline">Marketplace</a> > <span id="breadcrumb-cat">Product</span>{% endblock %}
+{% block page_subtitle %}View product details and add to your cart.{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -25,6 +25,11 @@
 {% endblock %}
 
 {% block content %}
+<!-- Breadcrumb -->
+<div class="mb-4">
+  <p id="breadcrumb-cat" class="text-sm text-gray-500">Loading...</p>
+</div>
+
 <div id="product-container" class="max-w-6xl mx-auto">
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
     <div class="skeleton rounded-2xl" style="aspect-ratio:1"></div>
@@ -37,17 +42,31 @@
 {% block extra_js %}
 <script>
 const API = '/api/marketplace';
-const productId = '{{ product_id }}';
+const productId = '{{ product_id|default:"" }}';
 let productData = null;
 let qty = 1;
 
 async function loadProduct() {
+  console.log('Loading product with ID:', productId);
+
+  if (!productId || productId === 'None' || productId === '') {
+    document.getElementById('product-container').innerHTML = '<p class="text-center py-20 text-gray-400">Invalid product ID.</p>';
+    return;
+  }
+
   try {
     var res = await fetch(API+'/products/'+productId+'/');
+    if (!res.ok) {
+      throw new Error('Product not found (status: ' + res.status + ')');
+    }
     productData = await res.json();
+    console.log('Product data loaded:', productData);
     renderProduct();
     lucide.createIcons();
-  } catch(e) { document.getElementById('product-container').innerHTML = '<p class="text-center py-20 text-gray-400">Product not found.</p>'; }
+  } catch(e) {
+    console.error('Error loading product:', e);
+    document.getElementById('product-container').innerHTML = '<p class="text-center py-20 text-gray-400">Product not found or an error occurred.</p>';
+  }
 }
 
 function renderProduct() {
@@ -92,11 +111,12 @@ function renderProduct() {
         '<p class="text-gray-600 leading-relaxed mb-5">'+(p.description||'No description available.')+'</p>' +
         (p.pet_type ? '<span class="inline-block text-xs bg-gray-100 px-3 py-1 rounded-full mb-4">'+p.pet_type+'</span>' : '') +
         // Quantity + Actions
-        '<div class="flex items-center gap-4 mb-5 flex-wrap">' +
-          '<div class="qty-ctrl"><button onclick="changeQty(-1)">−</button><span id="qty-display">1</span><button onclick="changeQty(1)">+</button></div>' +
-          '<button class="btn btn-primary flex-1 justify-center" onclick="addToCart()" '+(p.is_in_stock?'':'disabled')+'><i data-lucide="shopping-cart" class="w-5 h-5"></i> '+(p.is_in_stock?'Add to Cart':'Sold Out')+'</button>' +
-          '<button class="btn-wish'+(p.is_wishlisted?' active':'')+'" id="wishlist-btn" onclick="toggleWishlist()">'+(p.is_wishlisted?'♥':'♡')+'</button>' +
-        '</div>' +
+        (window.canUseMarketplaceCart !== false
+          ? '<div class="flex items-center gap-4 mb-5 flex-wrap">' +
+              '<div class="qty-ctrl"><button onclick="changeQty(-1)">−</button><span id="qty-display">1</span><button onclick="changeQty(1)">+</button></div>' +
+              '<button class="btn btn-primary flex-1 justify-center" onclick="addToCart()" '+(p.is_in_stock?'':'disabled')+'><i data-lucide="shopping-cart" class="w-5 h-5"></i> '+(p.is_in_stock?'Add to Cart':'Sold Out')+'</button>' +
+            '</div>'
+          : '') +
         // Perks
         '<div class="flex gap-5 text-sm">' +
           '<span class="perk-badge"><i data-lucide="truck" class="w-4 h-4 text-green-600"></i> Free Shipping</span>' +
@@ -140,6 +160,10 @@ async function deleteReview(reviewId) {
 }
 
 async function addToCart() {
+  if (window.canUseMarketplaceCart === false) {
+    showToast('Sellers cannot add products to cart.', 'warning');
+    return;
+  }
   var token = localStorage.getItem('access_token');
   if (!token) { window.location.href = '/signin/'; return; }
   try {
@@ -147,20 +171,6 @@ async function addToCart() {
     if (res.ok) { showToast('Added to cart!','success'); if (window.updateCartBadge) window.updateCartBadge(); } else { var d=await res.json(); showToast(d.quantity||'Error','error'); }
   } catch(e) {}
 }
-
-async function toggleWishlist() {
-  var token = localStorage.getItem('access_token');
-  if (!token) { window.location.href = '/signin/'; return; }
-  try {
-    var res = await fetch(API+'/wishlist/', {method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({product_id:productId})});
-    var d = await res.json();
-    var btn = document.getElementById('wishlist-btn');
-    btn.innerHTML = d.wishlisted ? '♥' : '♡';
-    btn.classList.toggle('active', d.wishlisted);
-    showToast(d.wishlisted?'Added to wishlist!':'Removed','info');
-  } catch(e) {}
-}
-
 loadProduct();
 </script>
 {% endblock %}

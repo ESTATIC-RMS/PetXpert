@@ -1,0 +1,16 @@
+{% extends "admin/base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Server error" %} | {{ site_title|default:_('PetXpert Admin') }}{% endblock %}
+
+{% block content %}
+<div class="px-error-page">
+    <div class="px-error-code">500</div>
+    <h1 class="px-error-title">{% trans "Something Went Wrong" %}</h1>
+    <p class="px-error-desc">{% trans "An unexpected error occurred. Our team has been notified. Please try again later." %}</p>
+    <a href="{% url 'admin:index' %}" class="px-quick-btn px-quick-btn-primary">
+        <span class="material-symbols-outlined text-base">dashboard</span>
+        {% trans "Back to Dashboard" %}
+    </a>
+</div>
+{% endblock %}

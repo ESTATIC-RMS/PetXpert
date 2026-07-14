@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Welcome Back - PetXpert</title>
+    {% load static %}
+    <link rel="icon" type="image/png" href="{% static 'images/logo.png' %}">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -29,7 +31,7 @@
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
-    <div class="max-w-4xl w-full bg-white rounded-[2rem] shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[600px]">
+    <div class="max-w-4xl w-full bg-white rounded-[2rem] shadow-2xl overflow-hidden flex flex-col md:flex-row max-h-[90vh]">
         <!-- Left Side: Visual -->
         <div class="md:w-1/2 bg-primary relative overflow-hidden flex items-center justify-center p-12">
             <div class="absolute inset-0 opacity-40">
@@ -43,7 +45,7 @@
                     <span class="text-2xl font-bold">PetXpert</span>
                 </div>
                 <h1 class="text-4xl font-bold leading-tight">Welcome back</h1>
-                <p class="text-blue-100 mt-4 text-lg">Log in to manage your pet's clinical heart data.</p>
+                <p class="text-blue-100 mt-4 text-lg">Log in to manage your pet's clinical heart.</p>
             </div>
         </div>
 
@@ -58,6 +60,7 @@
                         <i data-lucide="mail" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"></i>
                         <input type="email" id="email" required class="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all" placeholder="you@clinical.com">
                     </div>
+                    <p id="emailError" class="mt-1 text-xs text-red-500 hidden"></p>
                 </div>
 
                 <div>
@@ -66,8 +69,9 @@
                         <i data-lucide="lock" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"></i>
                         <input type="password" id="password" required class="w-full pl-12 pr-12 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all" placeholder="••••••••">
                     </div>
+                    <p id="passwordError" class="mt-1 text-xs text-red-500 hidden"></p>
                     <div class="flex justify-end mt-2">
-                        <a href="#" class="text-xs text-primary font-bold hover:underline">Forgot Password?</a>
+                        <a href="/forgot-password/" class="text-xs text-primary font-bold hover:underline">Forgot Password?</a>
                     </div>
                 </div>
 
@@ -86,8 +90,62 @@
     <script>
         lucide.createIcons();
 
+        // Validation Functions
+        const validators = {
+            email: (value) => {
+                const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+                if (!value) return 'Email is required';
+                if (!emailRegex.test(value)) return 'Please enter a valid email address';
+                if (value.length > 254) return 'Email is too long';
+                return null;
+            },
+            password: (value) => {
+                if (!value) return 'Password is required';
+                if (value.length < 8) return 'Password must be at least 8 characters';
+                return null;
+            }
+        };
+
+        // Real-time validation
+        function validateField(fieldId, validator) {
+            const field = document.getElementById(fieldId);
+            const errorElement = document.getElementById(fieldId + 'Error');
+            const error = validator(field.value.trim());
+            
+            if (error) {
+                errorElement.textContent = error;
+                errorElement.classList.remove('hidden');
+                field.classList.add('border-red-500', 'focus:ring-red-500');
+                field.classList.remove('border-gray-100', 'focus:ring-primary');
+                return false;
+            } else {
+                errorElement.classList.add('hidden');
+                field.classList.remove('border-red-500', 'focus:ring-red-500');
+                field.classList.add('border-gray-100', 'focus:ring-primary');
+                return true;
+            }
+        }
+
+        // Add real-time validation listeners
+        document.getElementById('email').addEventListener('blur', () => validateField('email', validators.email));
+        document.getElementById('email').addEventListener('input', () => {
+            const errorElement = document.getElementById('emailError');
+            if (!errorElement.classList.contains('hidden')) {
+                validateField('email', validators.email);
+            }
+        });
+        document.getElementById('password').addEventListener('blur', () => validateField('password', validators.password));
+        document.getElementById('password').addEventListener('input', () => {
+            const errorElement = document.getElementById('passwordError');
+            if (!errorElement.classList.contains('hidden')) {
+                validateField('password', validators.password);
+            }
+        });
+
         // Local Toast Notification System
         function showToast(message, type = 'success', duration = 4000) {
+            // Ensure minimum duration of 3 seconds
+            if (duration < 3000) duration = 3000;
             const container = document.getElementById('toast-container');
             if (!container) return;
 
@@ -144,12 +202,22 @@
 
         document.getElementById('signinForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+            
+            // Validate all fields before submission
+            const isEmailValid = validateField('email', validators.email);
+            const isPasswordValid = validateField('password', validators.password);
+            
+            if (!isEmailValid || !isPasswordValid) {
+                showToast('Please fix the errors before submitting', 'error');
+                return;
+            }
+            
             const submitBtn = document.getElementById('submitBtn');
             submitBtn.disabled = true;
             submitBtn.innerHTML = 'Signing in...';
 
             const data = {
-                email: document.getElementById('email').value,
+                email: document.getElementById('email').value.trim(),
                 password: document.getElementById('password').value
             };
 
@@ -166,14 +234,19 @@
                     localStorage.setItem('access_token', result.access);
                     localStorage.setItem('refresh_token', result.refresh);
                     localStorage.setItem('user', JSON.stringify(result.user));
-                    if (result.user.role === 'VETERINARIAN') {
-                        if (result.user.is_profile_complete) {
-                            window.location.href = '/veterinarians/';
-                        } else {
-                            window.location.href = '/veterinarian/complete-profile/';
-                        }
+                    localStorage.setItem('show_welcome', 'true');
+                    localStorage.setItem('petxpert_diagnosis_session', crypto.randomUUID());
+                    Object.keys(localStorage).forEach((key) => {
+                        if (key.startsWith('petxpert_diagnosis_chat_')) localStorage.removeItem(key);
+                    });
+                    if (result.user.role === 'VETERINARIAN' && !result.user.is_profile_complete) {
+                        window.location.href = '/veterinarian/complete-profile/';
+                    } else if (result.user.role === 'VETERINARIAN') {
+                        window.location.href = '/appointments/';
+                    } else if (result.user.role === 'SELLER') {
+                        window.location.href = '/marketplace/orders/manage/';
                     } else {
-                        window.location.href = '/veterinarians/';
+                        window.location.href = '/ai-diagnosis/';
                     }
                 } else {
                     showToast(result.error || 'Invalid credentials', 'error');

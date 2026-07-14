@@ -1,0 +1,276 @@
+{% extends "admin/base.html" %}
+{% load i18n %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('PetXpert Admin') }}{% endblock %}
+
+{% block branding %}
+    {% include "unfold/helpers/site_branding.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="flex flex-col gap-6">
+
+    {# Welcome banner #}
+    <div class="px-welcome">
+        <h2>{% trans "Welcome to PetXpert Admin" %}</h2>
+        <p>{% trans "Manage users, pets, healthcare services, marketplace, and platform settings from one place." %}</p>
+    </div>
+
+    {# Quick actions #}
+    <div class="flex flex-wrap gap-2">
+        <a href="{% url 'admin:accounts_user_add' %}" class="px-quick-btn px-quick-btn-primary">
+            <span class="material-symbols-outlined text-base">person_add</span>
+            {% trans "Add User" %}
+        </a>
+        <a href="{% url 'admin:marketplace_product_add' %}" class="px-quick-btn">
+            <span class="material-symbols-outlined text-base">add_shopping_cart</span>
+            {% trans "Add Product" %}
+        </a>
+        <a href="{% url 'admin:appointments_appointment_changelist' %}" class="px-quick-btn">
+            <span class="material-symbols-outlined text-base">calendar_month</span>
+            {% trans "Appointments" %}
+        </a>
+        <a href="{% url 'admin:marketplace_order_changelist' %}" class="px-quick-btn">
+            <span class="material-symbols-outlined text-base">receipt_long</span>
+            {% trans "Orders" %}
+        </a>
+        <a href="{% url 'admin:diagnosis_diagnosisrecord_changelist' %}" class="px-quick-btn">
+            <span class="material-symbols-outlined text-base">biotech</span>
+            {% trans "AI Diagnoses" %}
+        </a>
+        <a href="/" target="_blank" class="px-quick-btn">
+            <span class="material-symbols-outlined text-base">open_in_new</span>
+            {% trans "View Site" %}
+        </a>
+    </div>
+
+    {# Stat cards #}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="px-stat-card flex items-center gap-4">
+            <div class="px-stat-icon bg-blue-50 text-blue-600">
+                <span class="material-symbols-outlined">people</span>
+            </div>
+            <div>
+                <div class="px-stat-label">{% trans "Total Users" %}</div>
+                <div class="px-stat-value">{{ stats.total_users }}</div>
+                <div class="text-xs text-base-400 mt-0.5">+{{ stats.new_users_week }} {% trans "this week" %}</div>
+            </div>
+        </div>
+        <div class="px-stat-card flex items-center gap-4">
+            <div class="px-stat-icon bg-teal-50 text-teal-600">
+                <span class="material-symbols-outlined">pets</span>
+            </div>
+            <div>
+                <div class="px-stat-label">{% trans "Total Pets" %}</div>
+                <div class="px-stat-value">{{ stats.total_pets }}</div>
+            </div>
+        </div>
+        <div class="px-stat-card flex items-center gap-4">
+            <div class="px-stat-icon bg-purple-50 text-purple-600">
+                <span class="material-symbols-outlined">storefront</span>
+            </div>
+            <div>
+                <div class="px-stat-label">{% trans "Total Sellers" %}</div>
+                <div class="px-stat-value">{{ stats.total_sellers }}</div>
+            </div>
+        </div>
+        <div class="px-stat-card flex items-center gap-4">
+            <div class="px-stat-icon bg-indigo-50 text-indigo-600">
+                <span class="material-symbols-outlined">medical_services</span>
+            </div>
+            <div>
+                <div class="px-stat-label">{% trans "Veterinarians" %}</div>
+                <div class="px-stat-value">{{ stats.total_veterinarians }}</div>
+            </div>
+        </div>
+        <div class="px-stat-card flex items-center gap-4">
+            <div class="px-stat-icon bg-amber-50 text-amber-600">
+                <span class="material-symbols-outlined">biotech</span>
+            </div>
+            <div>
+                <div class="px-stat-label">{% trans "AI Diagnoses" %}</div>
+                <div class="px-stat-value">{{ stats.total_diagnoses }}</div>
+            </div>
+        </div>
+        <div class="px-stat-card flex items-center gap-4">
+            <div class="px-stat-icon bg-green-50 text-green-600">
+                <span class="material-symbols-outlined">inventory_2</span>
+            </div>
+            <div>
+                <div class="px-stat-label">{% trans "Products" %}</div>
+                <div class="px-stat-value">{{ stats.total_products }}</div>
+            </div>
+        </div>
+        <div class="px-stat-card flex items-center gap-4">
+            <div class="px-stat-icon bg-rose-50 text-rose-600">
+                <span class="material-symbols-outlined">shopping_cart</span>
+            </div>
+            <div>
+                <div class="px-stat-label">{% trans "Orders" %}</div>
+                <div class="px-stat-value">{{ stats.total_orders }}</div>
+            </div>
+        </div>
+        <div class="px-stat-card flex items-center gap-4">
+            <div class="px-stat-icon bg-sky-50 text-sky-600">
+                <span class="material-symbols-outlined">person</span>
+            </div>
+            <div>
+                <div class="px-stat-label">{% trans "Pet Owners" %}</div>
+                <div class="px-stat-value">{{ stats.pet_owners }}</div>
+            </div>
+        </div>
+    </div>
+
+    {# Recent activity tables #}
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+        {# Recent Users #}
+        <div class="px-panel">
+            <div class="px-panel-header">
+                <span class="material-symbols-outlined text-base text-primary-600">person_add</span>
+                {% trans "Recent Users" %}
+            </div>
+            <div class="px-panel-body">
+                {% if recent_users %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>{% trans "Name" %}</th>
+                            <th>{% trans "Role" %}</th>
+                            <th>{% trans "Joined" %}</th>
+                            <th class="text-right">{% trans "Actions" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in recent_users %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'admin:accounts_user_change' user.pk %}" class="font-semibold text-primary-600 hover:underline">
+                                    {{ user.full_name|default:user.email }}
+                                </a>
+                            </td>
+                            <td><span class="px-badge px-badge-info">{{ user.get_role_display }}</span></td>
+                            <td class="text-base-400">{{ user.created_at|date:"M d, Y" }}</td>
+                            <td class="text-right">
+                                <a href="{% url 'admin:accounts_user_change' user.pk %}" class="px-edit-btn">
+                                    <span class="material-symbols-outlined text-sm">edit</span>
+                                    {% trans "Edit" %}
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="px-empty">{% trans "No users yet." %}</div>
+                {% endif %}
+            </div>
+        </div>
+
+        {# Recent Orders #}
+        <div class="px-panel">
+            <div class="px-panel-header">
+                <span class="material-symbols-outlined text-base text-primary-600">receipt_long</span>
+                {% trans "Recent Orders" %}
+            </div>
+            <div class="px-panel-body">
+                {% if recent_orders %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>{% trans "Order" %}</th>
+                            <th>{% trans "Status" %}</th>
+                            <th>{% trans "Total" %}</th>
+                            <th class="text-right">{% trans "Actions" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in recent_orders %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'admin:marketplace_order_change' order.pk %}" class="font-semibold text-primary-600 hover:underline">
+                                    #{{ order.id.hex|slice:":8" }}
+                                </a>
+                                <div class="text-xs text-base-400">{{ order.user.email }}</div>
+                            </td>
+                            <td>
+                                {% if order.status == 'DELIVERED' or order.status == 'PAID' %}
+                                    <span class="px-badge px-badge-success">{{ order.get_status_display }}</span>
+                                {% elif order.status == 'CANCELLED' %}
+                                    <span class="px-badge px-badge-danger">{{ order.get_status_display }}</span>
+                                {% else %}
+                                    <span class="px-badge px-badge-warning">{{ order.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="font-semibold">PKR {{ order.total }}</td>
+                            <td class="text-right">
+                                <a href="{% url 'admin:marketplace_order_change' order.pk %}" class="px-edit-btn">
+                                    <span class="material-symbols-outlined text-sm">edit</span>
+                                    {% trans "Edit" %}
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="px-empty">{% trans "No orders yet." %}</div>
+                {% endif %}
+            </div>
+        </div>
+
+        {# Recent Appointments #}
+        <div class="px-panel">
+            <div class="px-panel-header">
+                <span class="material-symbols-outlined text-base text-primary-600">calendar_month</span>
+                {% trans "Recent Appointments" %}
+            </div>
+            <div class="px-panel-body">
+                {% if recent_appointments %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>{% trans "Pet Owner" %}</th>
+                            <th>{% trans "Status" %}</th>
+                            <th>{% trans "Date" %}</th>
+                            <th class="text-right">{% trans "Actions" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for appt in recent_appointments %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'admin:appointments_appointment_change' appt.pk %}" class="font-semibold text-primary-600 hover:underline">
+                                    {{ appt.pet_owner.full_name|default:appt.pet_owner.email }}
+                                </a>
+                                <div class="text-xs text-base-400">{{ appt.pet.name }}</div>
+                            </td>
+                            <td>
+                                {% if appt.status == 'CONFIRMED' or appt.status == 'COMPLETED' %}
+                                    <span class="px-badge px-badge-success">{{ appt.status }}</span>
+                                {% elif appt.status == 'CANCELLED' %}
+                                    <span class="px-badge px-badge-danger">{{ appt.status }}</span>
+                                {% else %}
+                                    <span class="px-badge px-badge-warning">{{ appt.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-base-400">{{ appt.scheduled_at|date:"M d, H:i" }}</td>
+                            <td class="text-right">
+                                <a href="{% url 'admin:appointments_appointment_change' appt.pk %}" class="px-edit-btn">
+                                    <span class="material-symbols-outlined text-sm">edit</span>
+                                    {% trans "Edit" %}
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="px-empty">{% trans "No appointments yet." %}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

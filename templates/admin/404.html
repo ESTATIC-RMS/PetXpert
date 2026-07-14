@@ -1,0 +1,16 @@
+{% extends "admin/base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Page not found" %} | {{ site_title|default:_('PetXpert Admin') }}{% endblock %}
+
+{% block content %}
+<div class="px-error-page">
+    <div class="px-error-code">404</div>
+    <h1 class="px-error-title">{% trans "Page Not Found" %}</h1>
+    <p class="px-error-desc">{% trans "The admin page you're looking for doesn't exist or may have been moved." %}</p>
+    <a href="{% url 'admin:index' %}" class="px-quick-btn px-quick-btn-primary">
+        <span class="material-symbols-outlined text-base">dashboard</span>
+        {% trans "Back to Dashboard" %}
+    </a>
+</div>
+{% endblock %}

@@ -45,6 +45,11 @@
   .btn:disabled { opacity:0.5; cursor:not-allowed; }
   .field-error { color:#dc2626; font-size:0.72rem; margin-top:0.25rem; display:none; }
   .field-error.show { display:block; }
+  .form-input.invalid { border-color:#dc2626; }
+  .form-input.valid { border-color:#22c55e; }
+  .char-count { text-align:right; font-size:0.7rem; color:#9ca3af; margin-top:0.2rem; }
+  .char-count.warning { color:#f59e0b; }
+  .char-count.error { color:#dc2626; }
 </style>
 {% endblock %}
 
@@ -60,23 +65,28 @@
         <h3>Basic Information</h3>
         <div class="form-group">
           <label>Product Name <span class="text-red-500">*</span></label>
-          <input class="form-input" id="prod-name" placeholder="e.g. Premium Orthopedic Dog Bed">
-          <p class="field-error" id="err-name">Product name is required</p>
+          <input class="form-input" id="prod-name" placeholder="e.g. Premium Orthopedic Dog Bed" maxlength="255" oninput="validateName()">
+          <p class="char-count" id="name-count">0/255</p>
+          <p class="field-error" id="err-name">Product name is required (3-255 characters)</p>
         </div>
         <div class="form-row">
           <div class="form-group">
             <label>Category <span class="text-red-500">*</span></label>
-            <select class="form-input" id="prod-category"><option value="">Select Category</option></select>
+            <select class="form-input" id="prod-category" onchange="validateCategory()"><option value="">Select Category</option></select>
             <p class="field-error" id="err-category">Please select a category</p>
           </div>
           <div class="form-group">
             <label>Brand</label>
-            <input class="form-input" id="prod-brand" placeholder="e.g. BarkComfort">
+            <input class="form-input" id="prod-brand" placeholder="e.g. BarkComfort" maxlength="100" oninput="validateBrand()">
+            <p class="char-count" id="brand-count">0/100</p>
+            <p class="field-error" id="err-brand">Brand name must be 2-100 characters</p>
           </div>
         </div>
         <div class="form-group">
-          <label>Product Description</label>
-          <textarea class="form-input" id="prod-desc" placeholder="Describe the key features, materials, and benefits of your product..." rows="4"></textarea>
+          <label>Product Description <span class="text-red-500">*</span></label>
+          <textarea class="form-input" id="prod-desc" placeholder="Describe the key features, materials, and benefits of your product..." rows="4" maxlength="2000" oninput="validateDescription()"></textarea>
+          <p class="char-count" id="desc-count">0/2000</p>
+          <p class="field-error" id="err-desc">Description is required (minimum 20 characters)</p>
         </div>
       </div>
 
@@ -86,25 +96,24 @@
         <div class="form-row">
           <div class="form-group">
             <label>Base Price (PKR) <span class="text-red-500">*</span></label>
-            <input class="form-input" id="prod-price" type="number" step="0.01" min="0" placeholder="0.00">
-            <p class="field-error" id="err-price">Valid price is required</p>
+            <input class="form-input" id="prod-price" type="number" step="0.01" min="0" placeholder="0.00" oninput="validatePrice()">
+            <p class="field-error" id="err-price">Valid price is required (minimum 10 PKR)</p>
           </div>
           <div class="form-group">
-            <label>Product SKU / ID Number</label>
-            <input class="form-input" id="prod-sku" placeholder="e.g. B&M-DOG-001">
+            <label>Quantity in Stock <span class="text-red-500">*</span></label>
+            <div class="qty-stepper">
+              <button type="button" onclick="changeQty(-1)">−</button>
+              <input type="number" id="prod-stock" value="1" min="0" readonly>
+              <button type="button" onclick="changeQty(1)">+</button>
+            </div>
+            <p class="field-error" id="err-stock">Stock quantity is required</p>
           </div>
         </div>
         <div class="form-group">
-          <label>Quantity in Stock</label>
-          <div class="qty-stepper">
-            <button type="button" onclick="changeQty(-1)">−</button>
-            <input type="number" id="prod-stock" value="1" min="0" readonly>
-            <button type="button" onclick="changeQty(1)">+</button>
-          </div>
-        </div>
-        <div class="form-group">
-          <label>Pet Type</label>
-          <input class="form-input" id="prod-pet-type" placeholder="e.g. Dog, Cat, Bird (comma-separated)">
+          <label>Pet Type <span class="text-red-500">*</span></label>
+          <input class="form-input" id="prod-pet-type" placeholder="e.g. Dog, Cat, Bird (comma-separated)" maxlength="100" oninput="validatePetType()">
+          <p class="char-count" id="pet-type-count">0/100</p>
+          <p class="field-error" id="err-pet-type">Please specify at least one pet type</p>
         </div>
       </div>
 
@@ -117,10 +126,10 @@
           <p class="text-xs text-gray-400 mt-1">PNG, JPG, JPEG or WEBP</p>
         </div>
         <input type="file" id="file-input" accept="image/png,image/jpeg,image/webp" multiple hidden onchange="handleFiles(this.files)">
-        <p class="field-error" id="err-image">At least one image is required</p>
+        <p class="field-error" id="err-image">At least one image is required (max 8, max 5MB each)</p>
 
         <div class="flex flex-wrap gap-3 mt-3" id="image-previews"></div>
-        <p class="text-xs text-gray-400 mt-3">You can upload up to 8 photos. Use high-resolution PNG or JPG images for the best results. Recommended size is 1200×1200 pixels. Drag images to reorder.</p>
+        <p class="text-xs text-gray-400 mt-3">You can upload up to 8 photos. Use high-resolution PNG, JPG, or WEBP images (max 5MB each). Recommended size is 1200×1200 pixels. Drag images to reorder.</p>
       </div>
     </div>
 
@@ -159,6 +168,8 @@
 const API = '/api/marketplace';
 let uploadedFiles = [];
 let primaryImageIdx = 0;
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 
 // Load categories
 async function loadCats() {
@@ -175,13 +186,157 @@ function changeQty(delta) {
   var inp = document.getElementById('prod-stock');
   var v = Math.max(0, parseInt(inp.value||0) + delta);
   inp.value = v;
+  validateStock();
+}
+
+// Character count updater
+function updateCharCount(fieldId, countId, maxLength) {
+  var field = document.getElementById(fieldId);
+  var count = document.getElementById(countId);
+  var current = field.value.length;
+  count.textContent = current + '/' + maxLength;
+  
+  count.classList.remove('warning', 'error');
+  if (current >= maxLength * 0.9) {
+    count.classList.add('warning');
+  }
+  if (current >= maxLength) {
+    count.classList.add('error');
+  }
+}
+
+// Field validation functions
+function setFieldStatus(fieldId, isValid) {
+  var field = document.getElementById(fieldId);
+  var errorId = 'err-' + fieldId.replace('prod-', '');
+  var error = document.getElementById(errorId);
+  
+  field.classList.remove('invalid', 'valid');
+  if (error) error.classList.remove('show');
+  
+  if (field.value.trim() === '') {
+    // Empty field - neutral state
+    return;
+  }
+  
+  if (isValid) {
+    field.classList.add('valid');
+  } else {
+    field.classList.add('invalid');
+    if (error) error.classList.add('show');
+  }
+}
+
+function validateName() {
+  var field = document.getElementById('prod-name');
+  var value = field.value.trim();
+  updateCharCount('prod-name', 'name-count', 255);
+  var isValid = value.length >= 3 && value.length <= 255;
+  setFieldStatus('prod-name', isValid);
+  return isValid;
+}
+
+function validateCategory() {
+  var field = document.getElementById('prod-category');
+  var value = field.value;
+  var isValid = value !== '';
+  setFieldStatus('prod-category', isValid);
+  return isValid;
+}
+
+function validateBrand() {
+  var field = document.getElementById('prod-brand');
+  var value = field.value.trim();
+  updateCharCount('prod-brand', 'brand-count', 100);
+  var isValid = value === '' || (value.length >= 2 && value.length <= 100);
+  setFieldStatus('prod-brand', isValid);
+  return isValid;
+}
+
+function validateDescription() {
+  var field = document.getElementById('prod-desc');
+  var value = field.value.trim();
+  updateCharCount('prod-desc', 'desc-count', 2000);
+  var isValid = value.length >= 20 && value.length <= 2000;
+  setFieldStatus('prod-desc', isValid);
+  return isValid;
+}
+
+function validatePrice() {
+  var field = document.getElementById('prod-price');
+  var value = parseFloat(field.value);
+  var isValid = !isNaN(value) && value >= 10;
+  setFieldStatus('prod-price', isValid);
+  return isValid;
+}
+
+function validateStock() {
+  var field = document.getElementById('prod-stock');
+  var value = parseInt(field.value);
+  var isValid = !isNaN(value) && value >= 0;
+  setFieldStatus('prod-stock', isValid);
+  return isValid;
+}
+
+function validatePetType() {
+  var field = document.getElementById('prod-pet-type');
+  var value = field.value.trim();
+  updateCharCount('prod-pet-type', 'pet-type-count', 100);
+  var isValid = value.length >= 2 && value.length <= 100;
+  setFieldStatus('prod-pet-type', isValid);
+  return isValid;
+}
+
+function validateImages() {
+  var error = document.getElementById('err-image');
+  var isValid = uploadedFiles.length > 0 && uploadedFiles.length <= 8;
+  
+  if (uploadedFiles.length === 0) {
+    error.classList.add('show');
+    return false;
+  }
+  
+  if (uploadedFiles.length > 8) {
+    error.textContent = 'Maximum 8 images allowed';
+    error.classList.add('show');
+    return false;
+  }
+  
+  error.classList.remove('show');
+  return true;
 }
 
 function handleFiles(files) {
   for (var i=0; i<files.length && uploadedFiles.length < 8; i++) {
-    uploadedFiles.push(files[i]);
+    var file = files[i];
+    
+    // Validate file type
+    if (ALLOWED_TYPES.indexOf(file.type) === -1) {
+      showToast('Invalid file type: ' + file.name + '. Only PNG, JPG, and WEBP are allowed.', 'error');
+      continue;
+    }
+    
+    // Validate file size
+    if (file.size > MAX_FILE_SIZE) {
+      showToast('File too large: ' + file.name + '. Maximum size is 5MB.', 'error');
+      continue;
+    }
+    
+    // Check for duplicates
+    var isDuplicate = uploadedFiles.some(function(f) {
+      return f.name === file.name && f.size === file.size;
+    });
+    
+    if (isDuplicate) {
+      showToast('Duplicate file: ' + file.name, 'warning');
+      continue;
+    }
+    
+    uploadedFiles.push(file);
   }
+  
   renderPreviews();
+  validateImages();
   document.getElementById('file-input').value = '';
 }
 
@@ -192,8 +347,9 @@ function renderPreviews() {
     var url = URL.createObjectURL(f);
     var wrapper = document.createElement('div');
     wrapper.className = 'img-thumb-wrapper';
+    var fileSize = (f.size / 1024 / 1024).toFixed(2);
     wrapper.innerHTML =
-      '<img src="'+url+'" class="img-thumb'+(idx===primaryImageIdx?' primary':'')+'" onclick="setPrimary('+idx+')">' +
+      '<img src="'+url+'" class="img-thumb'+(idx===primaryImageIdx?' primary':'')+'" onclick="setPrimary('+idx+')" title="'+f.name+' ('+fileSize+' MB)">' +
       (idx===primaryImageIdx?'<span class="primary-badge">PRIMARY</span>':'') +
       '<button class="img-remove" onclick="removeImage('+idx+')">×</button>';
     container.appendChild(wrapper);
@@ -202,7 +358,7 @@ function renderPreviews() {
 }
 
 function setPrimary(idx) { primaryImageIdx = idx; renderPreviews(); }
-function removeImage(idx) { uploadedFiles.splice(idx,1); if (primaryImageIdx >= uploadedFiles.length) primaryImageIdx = Math.max(0, uploadedFiles.length-1); renderPreviews(); }
+function removeImage(idx) { uploadedFiles.splice(idx,1); if (primaryImageIdx >= uploadedFiles.length) primaryImageIdx = Math.max(0, uploadedFiles.length-1); renderPreviews(); validateImages(); }
 
 // Drag & drop
 var zone = document.getElementById('upload-zone');
@@ -212,19 +368,30 @@ zone.addEventListener('drop', function(e){ e.preventDefault(); zone.classList.re
 
 function validate() {
   var valid = true;
-  var name = document.getElementById('prod-name').value.trim();
-  var cat = document.getElementById('prod-category').value;
-  var price = parseFloat(document.getElementById('prod-price').value);
-  document.getElementById('err-name').classList.toggle('show', !name); if (!name) valid = false;
-  document.getElementById('err-category').classList.toggle('show', !cat); if (!cat) valid = false;
-  document.getElementById('err-price').classList.toggle('show', !price || price <= 0); if (!price || price<=0) valid = false;
-  document.getElementById('err-image').classList.toggle('show', uploadedFiles.length === 0); if (!uploadedFiles.length) valid = false;
+  
+  if (!validateName()) valid = false;
+  if (!validateCategory()) valid = false;
+  if (!validateDescription()) valid = false;
+  if (!validatePrice()) valid = false;
+  if (!validateStock()) valid = false;
+  if (!validatePetType()) valid = false;
+  if (!validateImages()) valid = false;
+  
+  // Brand is optional, but validate if provided
+  if (document.getElementById('prod-brand').value.trim() !== '' && !validateBrand()) valid = false;
+  
+  if (!valid) {
+    showToast('Please fix the errors before publishing', 'error');
+  }
+  
   return valid;
 }
 
 async function publishProduct() {
   if (!validate()) return;
-  var btn = document.getElementById('publish-btn'); btn.disabled = true;
+  
+  var btn = document.getElementById('publish-btn');
+  btn.disabled = true;
   btn.innerHTML = '<i data-lucide="loader" class="w-5 h-5 animate-spin"></i> Publishing...';
 
   var fd = new FormData();
@@ -235,19 +402,47 @@ async function publishProduct() {
   fd.append('stock', document.getElementById('prod-stock').value);
   fd.append('pet_type', document.getElementById('prod-pet-type').value.trim());
   fd.append('is_active', document.getElementById('prod-visibility').value === 'public' ? 'true' : 'false');
+  
+  // Optional fields
+  var brand = document.getElementById('prod-brand').value.trim();
+  if (brand) fd.append('brand', brand);
+  
   // Slug from name
   fd.append('slug', document.getElementById('prod-name').value.trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''));
+  
   // Primary image first
   if (uploadedFiles[primaryImageIdx]) fd.append('image', uploadedFiles[primaryImageIdx]);
   uploadedFiles.forEach(function(f){ fd.append('images', f); });
 
   try {
     var res = await fetch(API+'/seller/products/', {method:'POST', headers:{'Authorization':'Bearer '+localStorage.getItem('access_token')}, body:fd});
-    if (res.ok) { showToast('Product published!','success'); setTimeout(function(){ window.location.href='/marketplace/inventory/'; }, 800); }
-    else { var d = await res.json(); showToast(d.name||d.error||'Failed','error'); btn.disabled=false; btn.innerHTML='<i data-lucide="rocket" class="w-5 h-5"></i> Publish Product'; lucide.createIcons(); }
-  } catch(e) { btn.disabled=false; btn.innerHTML='<i data-lucide="rocket" class="w-5 h-5"></i> Publish Product'; lucide.createIcons(); }
+    if (res.ok) {
+      showToast('Product published successfully!', 'success');
+      setTimeout(function(){ window.location.href='/marketplace/inventory/'; }, 1500);
+    } else {
+      var d = await res.json();
+      var errorMsg = d.name || d.error || d.detail || 'Failed to publish product';
+      if (typeof d === 'object' && d !== null) {
+        var firstError = Object.keys(d)[0];
+        if (d[firstError]) {
+          errorMsg = Array.isArray(d[firstError]) ? d[firstError][0] : d[firstError];
+        }
+      }
+      showToast(errorMsg, 'error');
+      btn.disabled = false;
+      btn.innerHTML = '<i data-lucide="rocket" class="w-5 h-5"></i> Publish Product';
+      lucide.createIcons();
+    }
+  } catch(e) {
+    console.error('Publish error:', e);
+    showToast('Network error. Please try again.', 'error');
+    btn.disabled = false;
+    btn.innerHTML = '<i data-lucide="rocket" class="w-5 h-5"></i> Publish Product';
+    lucide.createIcons();
+  }
 }
 
+// Initialize
 loadCats();
 lucide.createIcons();
 </script>

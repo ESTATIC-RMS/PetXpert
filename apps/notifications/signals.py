@@ -118,36 +118,60 @@ def appointment_notification_trigger(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender=Payment)
 def payment_notification_trigger(sender, instance, created, **kwargs):
-    # Triggers when a payment transitions to COMPLETED status
-    if instance.status == PaymentStatus.COMPLETED:
-        # Use Payment record ID to prevent duplicate trigger runs
-        if not Notification.objects.filter(related_id=instance.id, notification_type=NotificationType.PAYMENT_RECEIVED).exists():
-            appointment = instance.appointment
-            payer = instance.payer
-            vet_user = appointment.veterinarian.user if appointment and appointment.veterinarian else None
-            vet_name = vet_user.full_name if vet_user else "Veterinarian"
-            payer_name = payer.full_name if payer else "Pet Owner"
+    if instance.status != PaymentStatus.COMPLETED:
+        return
 
-            # Notify Owner (Payer)
-            Notification.objects.create(
-                recipient=payer,
-                title="Payment Confirmed",
-                content=f"Your payment of PKR {instance.amount} for the appointment with Dr. {vet_name} has been processed successfully.",
-                notification_type=NotificationType.PAYMENT_RECEIVED,
-                related_id=instance.id,
-                related_type="payment"
-            )
+    if instance.order_id:
+        if Notification.objects.filter(
+            related_id=instance.order_id,
+            notification_type=NotificationType.ORDER_PAYMENT_SUCCESS,
+        ).exists():
+            return
+        order = instance.order
+        items = order.items.all()
+        names = ', '.join(i.product_name for i in items[:3])
+        if items.count() > 3:
+            names += f' and {items.count() - 3} more'
+        Notification.objects.create(
+            recipient=instance.payer,
+            title='Payment Successful',
+            content=f'Your online payment of PKR {instance.amount} for order ({names}) was successful.',
+            notification_type=NotificationType.ORDER_PAYMENT_SUCCESS,
+            related_id=order.id,
+            related_type='order',
+        )
+        return
 
-            # Notify Vet
-            if vet_user:
-                Notification.objects.create(
-                    recipient=vet_user,
-                    title="Payment Received",
-                    content=f"Payment of PKR {instance.amount} has been received from {payer_name} for your scheduled consultation.",
-                    notification_type=NotificationType.PAYMENT_RECEIVED,
-                    related_id=instance.id,
-                    related_type="payment"
-                )
+    if not instance.appointment_id:
+        return
+
+    if Notification.objects.filter(related_id=instance.id, notification_type=NotificationType.PAYMENT_RECEIVED).exists():
+        return
+
+    appointment = instance.appointment
+    payer = instance.payer
+    vet_user = appointment.veterinarian.user if appointment and appointment.veterinarian else None
+    vet_name = vet_user.full_name if vet_user else "Veterinarian"
+    payer_name = payer.full_name if payer else "Pet Owner"
+
+    Notification.objects.create(
+        recipient=payer,
+        title="Payment Confirmed",
+        content=f"Your payment of PKR {instance.amount} for the appointment with Dr. {vet_name} has been processed successfully.",
+        notification_type=NotificationType.PAYMENT_RECEIVED,
+        related_id=instance.id,
+        related_type="payment"
+    )
+
+    if vet_user:
+        Notification.objects.create(
+            recipient=vet_user,
+            title="Payment Received",
+            content=f"Payment of PKR {instance.amount} has been received from {payer_name} for your scheduled consultation.",
+            notification_type=NotificationType.PAYMENT_RECEIVED,
+            related_id=instance.id,
+            related_type="payment"
+        )
 
 
 @receiver(post_save, sender=VeterinarianReview)

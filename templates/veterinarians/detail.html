@@ -39,7 +39,7 @@
     padding: 0;
     background: var(--warm-bg);
     min-height: 100vh;
-    font-family:sans-serif;
+    font-family: sans-serif;
     color: var(--ink);
   }
 
@@ -124,7 +124,7 @@
     justify-content: center;
     color: var(--muted);
     font-size: 48px;
-    font-family:sans-serif;
+    font-family: sans-serif;
     box-shadow: 0 4px 20px rgba(0, 0, 0, .08);
   }
 
@@ -189,7 +189,7 @@
   }
 
   .vd-hero-name {
-    font-family:sans-serif;
+    font-family: sans-serif;
     font-size: 42px;
     color: var(--ink);
     line-height: 1.1;
@@ -286,6 +286,15 @@
 
   .vd-btn-primary:active {
     transform: scale(.98);
+  }
+
+  .vd-btn-primary.is-disabled,
+  .vd-book-btn-primary.is-disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    pointer-events: none;
+    box-shadow: none;
+    transform: none;
   }
 
   .vd-btn-secondary {
@@ -642,7 +651,7 @@
 
   .vd-rating-big-num {
     font-size: 52px;
-    font-family:sans-serif;
+    font-family: sans-serif;
     color: var(--ink);
     line-height: 1;
   }
@@ -880,7 +889,7 @@
 
   .vd-book-fee {
     font-size: 32px;
-    font-family:sans-serif;
+    font-family: sans-serif;
     color: var(--ink);
     margin-bottom: 4px;
   }
@@ -1196,14 +1205,10 @@
         </div>
 
         <div class="vd-hero-cta">
-          <a href="/veterinarians/{{ veterinarian.id }}/book/" class="vd-btn-primary">
+          <a href="/veterinarians/{{ veterinarian.id }}/book/" class="vd-btn-primary js-vet-book-btn">
             <i data-lucide="calendar-check" style="width:16px;height:16px;"></i>
             Book appointment
           </a>
-          <button class="vd-btn-secondary">
-            <i data-lucide="message-circle" style="width:16px;height:16px;"></i>
-            Message doctor
-          </button>
         </div>
       </div>
 
@@ -1419,17 +1424,21 @@
                 <div class="vd-rating-big-num" id="ratingBigNum">{{ veterinarian.avg_rating|default:"0.0" }}</div>
                 <div class="vd-rating-big-stars" id="ratingBigStars">
                   {% for i in "12345" %}
-                  <span style="font-size:16px;color:{% if forloop.counter <= veterinarian.avg_rating|default:0 %}#FCD34D{% else %}#E8ECF1{% endif %};">★</span>
+                  <span
+                    style="font-size:16px;color:{% if forloop.counter <= veterinarian.avg_rating|default:0 %}#FCD34D{% else %}#E8ECF1{% endif %};">★</span>
                   {% endfor %}
                 </div>
-                <div class="vd-rating-big-count" id="ratingBigCount">{{ veterinarian.rating_count|default:0 }} reviews</div>
+                <div class="vd-rating-big-count" id="ratingBigCount">{{ veterinarian.rating_count|default:0 }} reviews
+                </div>
               </div>
               <div class="vd-breakdown" id="ratingBreakdown">
                 {% for star in "54321" %}
                 <div class="vd-breakdown-row">
-                  <span class="vd-breakdown-label">{{ forloop.counter|add:"-1"|add:"1" }}{% if forloop.counter == 1 %}5{% elif forloop.counter == 2 %}4{% elif forloop.counter == 3 %}3{% elif forloop.counter == 4 %}2{% else %}1{% endif %}</span>
-                  <div class="vd-breakdown-bar"><div class="vd-breakdown-fill" id="bar-{% if forloop.counter == 1 %}5{% elif forloop.counter == 2 %}4{% elif forloop.counter == 3 %}3{% elif forloop.counter == 4 %}2{% else %}1{% endif %}" style="width:0%;"></div></div>
-                  <span class="vd-breakdown-pct" id="pct-{% if forloop.counter == 1 %}5{% elif forloop.counter == 2 %}4{% elif forloop.counter == 3 %}3{% elif forloop.counter == 4 %}2{% else %}1{% endif %}">0%</span>
+                  <span class="vd-breakdown-label">{{ star }}</span>
+                  <div class="vd-breakdown-bar">
+                    <div class="vd-breakdown-fill" id="bar-{{ star }}" style="width:0%;"></div>
+                  </div>
+                  <span class="vd-breakdown-pct" id="pct-{{ star }}">0%</span>
                 </div>
                 {% endfor %}
               </div>
@@ -1509,14 +1518,10 @@
               </div>
             </div>
 
-            <a href="/veterinarians/{{ veterinarian.id }}/book/" class="vd-book-btn-primary">
+            <a href="/veterinarians/{{ veterinarian.id }}/book/" class="vd-book-btn-primary js-vet-book-btn">
               <i data-lucide="calendar-check" style="width:16px;height:16px;"></i>
               Book appointment
             </a>
-            <button class="vd-book-btn-secondary">
-              <i data-lucide="message-circle" style="width:16px;height:16px;"></i>
-              Message doctor
-            </button>
 
             <div class="vd-book-guarantee">
               <i data-lucide="lock" style="width:12px;height:12px;"></i>
@@ -1637,10 +1642,10 @@
   /* ── Rating breakdown helper ─────────────────────────────── */
   function updateRatingBreakdown(reviews) {
     if (!reviews.length) return;
-    const counts = {1:0, 2:0, 3:0, 4:0, 5:0};
+    const counts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
     reviews.forEach(r => counts[r.rating] = (counts[r.rating] || 0) + 1);
     const total = reviews.length;
-    const barColors = {5:'#FBBF24', 4:'#86EFAC', 3:'#FDE68A', 2:'#FCA5A5', 1:'#FCA5A5'};
+    const barColors = { 5: '#FBBF24', 4: '#86EFAC', 3: '#FDE68A', 2: '#FCA5A5', 1: '#FCA5A5' };
 
     // Update avg + count in the summary
     const sum = reviews.reduce((a, r) => a + r.rating, 0);
@@ -1651,13 +1656,13 @@
     if (numEl) numEl.textContent = avg;
     if (cntEl) cntEl.textContent = total + ' review' + (total !== 1 ? 's' : '');
     if (starsEl) {
-      starsEl.innerHTML = [1,2,3,4,5].map(i =>
+      starsEl.innerHTML = [1, 2, 3, 4, 5].map(i =>
         `<span style="font-size:16px;color:${i <= Math.round(avg) ? '#FBBF24' : '#E8ECF1'};">★</span>`
       ).join('');
     }
 
     // Update bars
-    [5,4,3,2,1].forEach(star => {
+    [5, 4, 3, 2, 1].forEach(star => {
       const pct = total > 0 ? Math.round((counts[star] / total) * 100) : 0;
       const barEl = document.getElementById('bar-' + star);
       const pctEl = document.getElementById('pct-' + star);
@@ -1671,7 +1676,7 @@
     const container = document.getElementById('reviewsContainer');
     container.innerHTML = `
       <div class="vd-skeleton">
-        ${[1,2,3].map(() => `
+        ${[1, 2, 3].map(() => `
           <div style="padding:20px 0;border-bottom:1px solid var(--border);">
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
               <div style="width:36px;height:36px;border-radius:10px;background:#E2E8F0;flex-shrink:0;"></div>
@@ -1733,7 +1738,7 @@
       });
       const name = review.patient_name || 'Anonymous';
       const initials = name.split(' ').filter(Boolean).map(n => n[0]).join('').substring(0, 2).toUpperCase();
-      const starsHtml = [1,2,3,4,5].map(i =>
+      const starsHtml = [1, 2, 3, 4, 5].map(i =>
         `<span style="font-size:14px;color:${i <= review.rating ? '#FBBF24' : '#E2E8F0'}">★</span>`
       ).join('');
 
@@ -1761,8 +1766,25 @@
   document.getElementById('reviewSort').addEventListener('change', sortAndRenderReviews);
 
   document.addEventListener('DOMContentLoaded', () => {
+    applyVetBookRestrictions();
     loadReviews();
     if (typeof lucide !== 'undefined') lucide.createIcons();
   });
+
+  function applyVetBookRestrictions() {
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      if (user.role !== 'VETERINARIAN') return;
+
+      document.querySelectorAll('.js-vet-book-btn').forEach((btn) => {
+        btn.classList.add('is-disabled');
+        btn.setAttribute('aria-disabled', 'true');
+        btn.setAttribute('title', 'Veterinarians cannot book appointments');
+        btn.removeAttribute('href');
+      });
+    } catch (error) {
+      // ignore
+    }
+  }
 </script>
 {% endblock %}

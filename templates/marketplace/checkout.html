@@ -1,6 +1,6 @@
 {% extends "layouts/base.html" %}
 {% block page_title %}Checkout{% endblock %}
-{% block page_subtitle %}<button onclick="history.back()" class="inline-flex items-center gap-1 text-gray-400 hover:text-[var(--primary)] font-bold text-sm mr-2 transition-colors"><i data-lucide="arrow-left" class="w-4 h-4"></i> Back</button> <a href="/marketplace/" class="text-gray-400 hover:text-[var(--primary)]">Shop</a> > <a href="/marketplace/cart/" class="text-gray-400 hover:text-[var(--primary)]">Cart</a> > <span class="font-bold text-[var(--primary)]">Checkout</span>{% endblock %}
+{% block page_subtitle %}Complete your order with secure payment options.{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -42,7 +42,22 @@
         <div class="delivery-option" onclick="selectDelivery('express')" id="del-express"><div class="delivery-radio"></div><div class="flex-1"><p class="font-bold text-sm">Express Delivery</p><p class="text-xs text-gray-400">Next Day</p></div><span class="text-sm font-bold">Rs. 500</span></div>
       </div>
       <div class="checkout-card"><h3><i data-lucide="credit-card" class="w-5 h-5 text-[var(--primary)]"></i> Payment Method</h3>
-        <div class="delivery-option selected" id="pay-cod"><div class="delivery-radio"></div><div class="flex-1"><p class="font-bold text-sm">Cash on Delivery</p><p class="text-xs text-gray-400">Pay when you receive</p></div><span class="text-xs font-bold text-green-700 bg-green-50 px-2 py-1 rounded-full">Available</span></div>
+        <div class="delivery-option selected" onclick="selectPayment('COD')" id="pay-cod">
+          <div class="delivery-radio"></div>
+          <div class="flex-1">
+            <p class="font-bold text-sm">Cash on Delivery</p>
+            <p class="text-xs text-gray-400">Pay when you receive your order</p>
+          </div>
+          <span class="text-xs font-bold text-green-700 bg-green-50 px-2 py-1 rounded-full">Available</span>
+        </div>
+        <div class="delivery-option" onclick="selectPayment('STRIPE')" id="pay-stripe">
+          <div class="delivery-radio"></div>
+          <div class="flex-1">
+            <p class="font-bold text-sm">Place Order</p>
+            <p class="text-xs text-gray-400">Secure card payment via Stripe</p>
+          </div>
+          <span class="text-xs font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded-full flex items-center gap-1"><i data-lucide="lock" class="w-3 h-3"></i> Secure</span>
+        </div>
       </div>
     </div>
     <div class="lg:col-span-1">
@@ -52,7 +67,7 @@
         <div class="summary-row"><span>Shipping</span><span id="sum-shipping">Rs. 200</span></div>
         <div class="summary-row"><span>Estimated Tax (5%)</span><span id="sum-tax">Rs. 0</span></div>
         <div class="summary-total"><span>Grand Total</span><span id="sum-total" class="text-[var(--primary)]">Rs. 0</span></div>
-        <button class="btn btn-orange w-full mt-4 text-base" id="complete-btn" onclick="placeOrder()"><i data-lucide="lock" class="w-5 h-5"></i> Order Now</button>
+        <button class="btn btn-orange w-full mt-4 text-base" id="complete-btn" onclick="placeOrder()"><i data-lucide="lock" class="w-5 h-5"></i> <span id="complete-btn-text">Place Order</span></button>
         <p class="text-xs text-gray-400 text-center mt-3">By clicking Order Now, you agree to our Terms.</p>
       </div>
     </div>
@@ -66,6 +81,7 @@
 const API = '/api/marketplace';
 let cartData = null;
 let deliveryType = 'standard';
+let paymentMethod = 'COD';
 
 async function loadCheckout() {
   var token = localStorage.getItem('access_token');
@@ -98,6 +114,13 @@ function renderSummary() {
 
 function selectDelivery(type) { deliveryType = type; document.getElementById('del-standard').classList.toggle('selected', type==='standard'); document.getElementById('del-express').classList.toggle('selected', type==='express'); renderSummary(); }
 
+function selectPayment(method) {
+  paymentMethod = method;
+  document.getElementById('pay-cod').classList.toggle('selected', method === 'COD');
+  document.getElementById('pay-stripe').classList.toggle('selected', method === 'STRIPE');
+  document.getElementById('complete-btn-text').textContent = method === 'STRIPE' ? 'Pay Securely with Stripe' : 'Place Order';
+}
+
 function validate() {
   var valid = true;
   ['ship-first','ship-last','ship-address','ship-city','ship-phone'].forEach(function(id){
@@ -112,17 +135,45 @@ function validate() {
 async function placeOrder() {
   if (!validate()) { showToast('Please fill all required fields','error'); return; }
   var btn = document.getElementById('complete-btn');
-  btn.disabled = true; btn.innerHTML = '<i data-lucide="loader" class="w-5 h-5 animate-spin"></i> Placing Order...'; lucide.createIcons();
+  var btnText = document.getElementById('complete-btn-text');
+  btn.disabled = true;
+  btnText.textContent = paymentMethod === 'STRIPE' ? 'Redirecting to Stripe...' : 'Placing Order...';
+  lucide.createIcons();
   var token = localStorage.getItem('access_token');
   var addr = document.getElementById('ship-first').value.trim()+' '+document.getElementById('ship-last').value.trim()+', '+document.getElementById('ship-address').value.trim()+', '+document.getElementById('ship-city').value.trim();
   var phone = document.getElementById('ship-phone').value.trim();
   try {
-    var res = await fetch(API+'/checkout/', {method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token}, body:JSON.stringify({shipping_address:addr, contact_phone:phone, notes:''})});
+    var res = await fetch(API+'/checkout/', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body:JSON.stringify({
+        shipping_address: addr,
+        contact_phone: phone,
+        notes: '',
+        payment_method: paymentMethod,
+        delivery_type: deliveryType,
+      })
+    });
     var d = await res.json();
-    if (!res.ok) { showToast(d.error||d.cart||'Checkout failed','error'); btn.disabled=false; btn.innerHTML='<i data-lucide="lock" class="w-5 h-5"></i> Order Now'; lucide.createIcons(); return; }
-    showToast('Order placed!','success');
+    if (!res.ok) {
+      showToast(d.error||d.cart||'Checkout failed','error');
+      btn.disabled=false;
+      btnText.textContent = paymentMethod === 'STRIPE' ? 'Pay Securely with Stripe' : 'Place Order';
+      lucide.createIcons();
+      return;
+    }
+    if (d.checkout_url) {
+      window.location.href = d.checkout_url;
+      return;
+    }
+    showToast('Order placed successfully!','success');
     setTimeout(function(){ window.location.href='/marketplace/orders/manage/'; }, 500);
-  } catch(e) { btn.disabled=false; btn.innerHTML='<i data-lucide="lock" class="w-5 h-5"></i> Order Now'; lucide.createIcons(); }
+  } catch(e) {
+    btn.disabled=false;
+    btnText.textContent = paymentMethod === 'STRIPE' ? 'Pay Securely with Stripe' : 'Place Order';
+    lucide.createIcons();
+    showToast('Checkout failed. Please try again.','error');
+  }
 }
 
 loadCheckout();

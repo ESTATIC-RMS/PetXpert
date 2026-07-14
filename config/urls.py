@@ -4,13 +4,18 @@ from django.shortcuts import render
 from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework_simplejwt.views import TokenRefreshView
+
+# PetXpert Admin branding (django.contrib.admin + django-unfold)
+admin.site.site_header = 'PetXpert Administration'
+admin.site.site_title = 'PetXpert Admin'
+admin.site.index_title = 'Platform Dashboard'
 from apps.accounts.views import (
     SignupView, SigninView, ProfileImageUploadView, ProfileImageDeleteView,
     UserProfileView, VeterinarianProfileImageUploadView, VeterinarianProfileImageDeleteView,
     VeterinarianProfileUpdateView, VeterinarianListView,
     VeterinarianReviewListCreateView, VeterinarianReviewDetailView,
     UserReviewListView, AppointmentReviewView, veterinarian_detail_page, book_appointment_page,
-    DashboardStatsView, PublicStatsView
+    DashboardStatsView, PublicStatsView, ForgotPasswordView
 )
 from apps.appointments.views import AvailableTimeSlotsView, AppointmentListCreateView, AppointmentStatusUpdateView
 from apps.payments.views import (
@@ -27,6 +32,9 @@ def signup_page(request):
 def signin_page(request):
     return render(request, 'auth/signin.html')
 
+def forgot_password_page(request):
+    return render(request, 'auth/forgot-password.html')
+
 def veterinarians_page(request):
     return render(request, 'veterinarians/list.html')
 
@@ -37,7 +45,8 @@ def my_pets_page(request):
     return render(request, 'pets/my_pets.html')
 
 def dashboard_page(request):
-    return render(request, 'dashboard/dashboard.html')
+    from django.http import HttpResponseRedirect
+    return HttpResponseRedirect('/appointments/')
 
 def appointments_page(request):
     return render(request, 'appointments/appointments.html')
@@ -105,6 +114,7 @@ urlpatterns = [
     path('', index, name='index'),
     path('signup/', signup_page, name='signup_page'),
     path('signin/', signin_page, name='signin_page'),
+    path('forgot-password/', forgot_password_page, name='forgot_password_page'),
     path('community/', chat_page, name='chat_page'),
     path('ai-diagnosis/', diagnosis_page, name='diagnosis_page'),
     path('marketplace/', marketplace_page, name='marketplace_page'),
@@ -135,6 +145,7 @@ urlpatterns = [
     path('my-pets/', my_pets_page, name='my_pets_page'),
     path('api/signup/', SignupView.as_view(), name='api_signup'),
     path('api/signin/', SigninView.as_view(), name='api_signin'),
+    path('api/forgot-password/', ForgotPasswordView.as_view(), name='api_forgot_password'),
     path('api/public/stats/', PublicStatsView.as_view(), name='api_public_stats'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/profile/', UserProfileView.as_view(), name='api_profile'),
