@@ -351,6 +351,36 @@
                     </div>
                 </div>
 
+                <!-- Seller Specific Fields -->
+                <div id="sellerFields" class="space-y-4 hidden">
+                    <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider">Seller Information</h3>
+
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Store Name</label>
+                        <input type="text" id="storeName" name="store_name" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent" placeholder="Enter store name">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Store Description</label>
+                        <textarea id="storeDescription" name="store_description" rows="3" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent" placeholder="Describe your store"></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Phone Number</label>
+                        <input type="text" id="sellerPhoneNumber" name="phone_number" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent" placeholder="Enter phone number">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Address</label>
+                        <textarea id="sellerAddress" name="address" rows="2" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent" placeholder="Enter address"></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2">Account Number</label>
+                        <input type="text" id="accountNumber" name="account_number" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-transparent" placeholder="Enter account number">
+                    </div>
+                </div>
+
                 <!-- Action Buttons -->
                 <div class="flex gap-3 pt-4 border-t border-gray-100">
                     <button type="button" onclick="closeEditProfileModal()" class="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors">
@@ -768,6 +798,12 @@
                     document.getElementById('veterinarianFields').classList.remove('hidden');
                     loadVeterinarianProfileData();
                 }
+
+                // Show seller fields if user is a seller
+                if (data.role === 'SELLER') {
+                    document.getElementById('sellerFields').classList.remove('hidden');
+                    loadSellerProfileData();
+                }
             })
             .catch(error => console.error('Error loading profile:', error));
         }
@@ -789,6 +825,21 @@
                 document.getElementById('bio').value = data.bio || '';
             })
             .catch(error => console.error('Error loading veterinarian profile:', error));
+        }
+
+        function loadSellerProfileData() {
+            authenticatedFetch('/api/accounts/profile/seller/', {
+                method: 'GET'
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('storeName').value = data.store_name || '';
+                document.getElementById('storeDescription').value = data.store_description || '';
+                document.getElementById('sellerPhoneNumber').value = data.phone_number || '';
+                document.getElementById('sellerAddress').value = data.address || '';
+                document.getElementById('accountNumber').value = data.account_number || '';
+            })
+            .catch(error => console.error('Error loading seller profile:', error));
         }
 
         function handleImageUpload(event) {
@@ -842,16 +893,24 @@
                 };
                 document.getElementById('userName').innerText = capitalizeName(updatedUser.full_name || updatedUser.email);
                 
-                // Handle profile image upload if selected
-                const imageInput = document.getElementById('profileImageInput');
-                if (imageInput.files[0]) {
-                    uploadProfileImage(userData.role);
-                } else {
-                    // If veterinarian, update veterinarian profile
-                    if (userData.role === 'VETERINARIAN') {
-                        updateVeterinarianProfile();
+                // Handle role-specific profile updates
+                if (userData.role === 'VETERINARIAN') {
+                    // Handle veterinarian profile
+                    const imageInput = document.getElementById('profileImageInput');
+                    if (imageInput.files[0]) {
+                        uploadProfileImage(userData.role);
                     } else {
-                        // Reload profile image and close modal
+                        updateVeterinarianProfile();
+                    }
+                } else if (userData.role === 'SELLER') {
+                    // Handle seller profile (image upload is handled in the update function)
+                    updateSellerProfileWithImage();
+                } else {
+                    // Handle regular user profile
+                    const imageInput = document.getElementById('profileImageInput');
+                    if (imageInput.files[0]) {
+                        uploadProfileImage(userData.role);
+                    } else {
                         loadProfileImage();
                         closeEditProfileModal();
                         showToast('Profile updated successfully!', 'success');
@@ -868,15 +927,15 @@
             const token = localStorage.getItem('access_token');
             const imageInput = document.getElementById('profileImageInput');
             const formData = new FormData();
-            
+
             if (userRole === 'VETERINARIAN') {
                 formData.append('profile_image', imageInput.files[0]);
             } else {
                 formData.append('avatar', imageInput.files[0]);
             }
-            
-            const endpoint = userRole === 'VETERINARIAN' 
-                ? '/api/profile/vet/avatar/upload/' 
+
+            const endpoint = userRole === 'VETERINARIAN'
+                ? '/api/profile/vet/avatar/upload/'
                 : '/api/profile/avatar/upload/';
             
             authenticatedFetch(endpoint, {
@@ -895,6 +954,9 @@
                 }
                 if (userData.role === 'VETERINARIAN') {
                     updateVeterinarianProfile();
+                } else if (userData.role === 'SELLER') {
+                    // For sellers, we need to update the profile with the image
+                    updateSellerProfileWithImage();
                 } else {
                     loadProfileImage();
                     closeEditProfileModal();
@@ -934,6 +996,62 @@
             .catch(error => {
                 console.error('Error updating veterinarian profile:', error);
                 showToast('Error updating veterinarian profile. Please try again.', 'error');
+            });
+        }
+
+        function updateSellerProfile() {
+            const sellerData = {
+                store_name: document.getElementById('storeName').value,
+                store_description: document.getElementById('storeDescription').value,
+                phone_number: document.getElementById('sellerPhoneNumber').value,
+                address: document.getElementById('sellerAddress').value,
+                account_number: document.getElementById('accountNumber').value
+            };
+
+            authenticatedFetch('/api/accounts/profile/seller/', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(sellerData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                loadProfileImage();
+                closeEditProfileModal();
+                showToast('Profile updated successfully!', 'success');
+            })
+            .catch(error => {
+                console.error('Error updating seller profile:', error);
+                showToast('Error updating seller profile. Please try again.', 'error');
+            });
+        }
+
+        function updateSellerProfileWithImage() {
+            const imageInput = document.getElementById('profileImageInput');
+            const formData = new FormData();
+
+            formData.append('store_name', document.getElementById('storeName').value);
+            formData.append('store_description', document.getElementById('storeDescription').value);
+            formData.append('phone_number', document.getElementById('sellerPhoneNumber').value);
+            formData.append('address', document.getElementById('sellerAddress').value);
+            formData.append('account_number', document.getElementById('accountNumber').value);
+
+            if (imageInput.files[0]) {
+                formData.append('store_logo', imageInput.files[0]);
+            }
+
+            authenticatedFetch('/api/accounts/profile/seller/', {
+                method: 'PUT',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                loadProfileImage();
+                closeEditProfileModal();
+                showToast('Profile updated successfully!', 'success');
+            })
+            .catch(error => {
+                console.error('Error updating seller profile:', error);
+                showToast('Error updating seller profile. Please try again.', 'error');
             });
         }
 

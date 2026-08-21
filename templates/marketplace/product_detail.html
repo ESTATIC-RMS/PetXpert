@@ -76,6 +76,11 @@ function renderProduct() {
   var discount = p.discount_percent;
   var stars = '★'.repeat(Math.round(p.rating)) + '☆'.repeat(5-Math.round(p.rating));
 
+  // Check if user has already reviewed
+  var currentUserId = (function(){try{return JSON.parse(localStorage.getItem('user')||'{}').id;}catch(e){return null;}})();
+  var hasReviewed = p.reviews && p.reviews.some(function(r){ return r.user_id === currentUserId; });
+  var isAuthenticated = currentUserId !== null;
+
   // Breadcrumb
   document.getElementById('breadcrumb-cat').textContent = (p.category||'Product') + ' > ' + p.name;
 
@@ -127,8 +132,22 @@ function renderProduct() {
     // Reviews Section (hidden by default)
     '<div id="reviews-section" class="hidden mt-8 bg-white rounded-2xl border border-gray-100 card-shadow p-6">' +
       '<div class="flex items-center justify-between mb-4"><h2 class="text-xl font-bold" style="font-family:\'Hanken Grotesk\',sans-serif\">Reviews ('+p.review_count+')</h2><button onclick="toggleReviews()" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-5 h-5"></i></button></div>' +
+      // Add Review Form (only show if authenticated and hasn't reviewed)
+      (isAuthenticated && !hasReviewed ?
+      '<div id="add-review-form" class="mb-6 p-4 bg-gray-50 rounded-xl">' +
+        '<h3 class="font-bold text-sm mb-3">Write a Review</h3>' +
+        '<div class="flex gap-1 mb-3" id="rating-stars">' +
+          '<button onclick="setRating(1)" class="text-2xl text-gray-300 hover:text-yellow-500 rating-star" data-rating="1">★</button>' +
+          '<button onclick="setRating(2)" class="text-2xl text-gray-300 hover:text-yellow-500 rating-star" data-rating="2">★</button>' +
+          '<button onclick="setRating(3)" class="text-2xl text-gray-300 hover:text-yellow-500 rating-star" data-rating="3">★</button>' +
+          '<button onclick="setRating(4)" class="text-2xl text-gray-300 hover:text-yellow-500 rating-star" data-rating="4">★</button>' +
+          '<button onclick="setRating(5)" class="text-2xl text-gray-300 hover:text-yellow-500 rating-star" data-rating="5">★</button>' +
+        '</div>' +
+        '<textarea id="review-text" rows="3" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm mb-3" placeholder="Share your experience with this product..."></textarea>' +
+        '<button onclick="submitReview()" class="px-4 py-2 bg-[var(--primary)] text-white rounded-xl font-bold text-sm">Submit Review</button>' +
+      '</div>' : (hasReviewed ? '<p class="text-sm text-gray-500 mb-4">You have already reviewed this product.</p>' : (!isAuthenticated ? '<p class="text-sm text-gray-500 mb-4"><a href="/signin/" class="text-[var(--primary)] font-bold">Sign in</a> to write a review.</p>' : ''))) +
       '<div id="reviews-content">' +
-        (p.reviews && p.reviews.length ? p.reviews.map(function(r){var currentUserId = (function(){try{return JSON.parse(localStorage.getItem('user')||'{}').id;}catch(e){return null;}})(); var isOwn = currentUserId && r.user_id === currentUserId; return '<div class="border-b border-gray-100 py-3 last:border-0"><div class="flex items-center gap-2"><span class="text-yellow-500">' + '★'.repeat(r.rating) + '</span><span class="text-sm font-bold">' + r.user_name + '</span><span class="text-xs text-gray-400">' + new Date(r.created_at).toLocaleDateString() + '</span>' + (isOwn ? '<button onclick="deleteReview(\''+r.id+'\')" class="ml-auto text-xs text-red-500 hover:text-red-700 font-bold">Remove</button>' : '') + '</div><p class="text-gray-600 text-sm mt-1">' + (r.comment||'') + '</p></div>';}).join('') : '<p class="text-gray-400 text-sm text-center py-4">No reviews yet. Be the first to review!</p>') +
+        (p.reviews && p.reviews.length ? p.reviews.map(function(r){var isOwn = currentUserId && r.user_id === currentUserId; return '<div class="border-b border-gray-100 py-3 last:border-0"><div class="flex items-center gap-2"><span class="text-yellow-500">' + '★'.repeat(r.rating) + '</span><span class="text-sm font-bold">' + r.user_name + '</span><span class="text-xs text-gray-400">' + new Date(r.created_at).toLocaleDateString() + '</span>' + (isOwn ? '<button onclick="deleteReview(\''+r.id+'\')" class="ml-auto text-xs text-red-500 hover:text-red-700 font-bold">Remove</button>' : '') + '</div><p class="text-gray-600 text-sm mt-1">' + (r.comment||'') + '</p></div>';}).join('') : '<p class="text-gray-400 text-sm text-center py-4">No reviews yet. Be the first to review!</p>') +
       '</div>' +
     '</div>' +
     // You May Also Like
@@ -147,6 +166,70 @@ function toggleReviews() {
   var el = document.getElementById('reviews-section');
   if (el) el.classList.toggle('hidden');
 }
+
+let selectedRating = 0;
+
+function setRating(rating) {
+  selectedRating = rating;
+  document.querySelectorAll('.rating-star').forEach(function(star) {
+    var starRating = parseInt(star.getAttribute('data-rating'));
+    star.classList.remove('text-yellow-500');
+    star.classList.add('text-gray-300');
+    if (starRating <= rating) {
+      star.classList.remove('text-gray-300');
+      star.classList.add('text-yellow-500');
+    }
+  });
+}
+
+async function submitReview() {
+  if (selectedRating === 0) {
+    showToast('Please select a rating', 'error');
+    return;
+  }
+
+  var token = localStorage.getItem('access_token');
+  if (!token) {
+    showToast('Please sign in to submit a review', 'error');
+    window.location.href = '/signin/';
+    return;
+  }
+
+  var comment = document.getElementById('review-text').value;
+
+  try {
+    var res = await fetch(API+'/products/'+productId+'/review/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer '+token
+      },
+      body: JSON.stringify({
+        rating: selectedRating,
+        comment: comment
+      })
+    });
+
+    if (res.ok) {
+      showToast('Review submitted successfully!', 'success');
+      // Reset form
+      selectedRating = 0;
+      document.getElementById('review-text').value = '';
+      document.querySelectorAll('.rating-star').forEach(function(star) {
+        star.classList.remove('text-yellow-500');
+        star.classList.add('text-gray-300');
+      });
+      // Reload product to show new review
+      loadProduct();
+    } else {
+      var data = await res.json();
+      showToast(data.rating || data.detail || 'Failed to submit review', 'error');
+    }
+  } catch(e) {
+    console.error('Error submitting review:', e);
+    showToast('Error submitting review. Please try again.', 'error');
+  }
+}
 function changeQty(delta) { qty = Math.max(1, qty+delta); document.getElementById('qty-display').textContent = qty; }
 
 async function deleteReview(reviewId) {
@@ -156,7 +239,10 @@ async function deleteReview(reviewId) {
     await fetch(API+'/products/'+productId+'/review/', {method:'DELETE', headers:{'Authorization':'Bearer '+token}});
     showToast('Review removed','info');
     loadProduct();
-  } catch(e) {}
+  } catch(e) {
+    console.error('Error deleting review:', e);
+    showToast('Error removing review', 'error');
+  }
 }
 
 async function addToCart() {

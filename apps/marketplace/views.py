@@ -406,7 +406,8 @@ class SellerOrderListView(APIView):
     def get(self, request):
         seller = _get_seller(request.user)
         orders = Order.objects.filter(seller=seller).prefetch_related('items').order_by('-created_at')[:50]
-        return Response([{'id':str(o.id),'status':o.status,'total':float(o.total),'buyer_name':o.user.full_name,'buyer_email':o.user.email,'shipping_address':o.shipping_address,'contact_phone':o.contact_phone,'items':[{'product_name':i.product_name,'price':float(i.price),'quantity':i.quantity} for i in o.items.all()],'created_at':o.created_at.isoformat()} for o in orders])
+        # Show total as subtotal + shipping (excluding tax)
+        return Response([{'id':str(o.id),'status':o.status,'total':float(o.subtotal + o.shipping_fee),'buyer_name':o.user.full_name,'buyer_email':o.user.email,'shipping_address':o.shipping_address,'contact_phone':o.contact_phone,'items':[{'product_name':i.product_name,'price':float(i.price),'quantity':i.quantity} for i in o.items.all()],'created_at':o.created_at.isoformat()} for o in orders])
 
 class SellerOrderUpdateView(APIView):
     permission_classes = (permissions.IsAuthenticated,)
@@ -582,5 +583,9 @@ class SellerSalesSummaryView(APIView):
     def get(self, request):
         seller = _get_seller(request.user)
         orders = Order.objects.filter(seller=seller)
-        revenue = sum(float(o.total) for o in orders.filter(status__in=['PAID','PROCESSING','SHIPPED','DELIVERED']))
-        return Response({'total_revenue':round(revenue,2),'total_orders':orders.count(),'pending_orders':orders.filter(status__in=['PENDING_PAYMENT','PAID','PROCESSING']).count(),'products_count':Product.objects.filter(seller=seller,is_deleted=False).count(),'store_name':seller.store_name})
+        # Calculate revenue as subtotal + shipping (excluding tax)
+        completed_orders = orders.filter(status__in=['PAID','PROCESSING','SHIPPED','DELIVERED'])
+        revenue = sum(float(o.subtotal + o.shipping_fee) for o in completed_orders)
+        # Calculate average order value
+        avg_order_value = revenue / completed_orders.count() if completed_orders.count() > 0 else 0
+        return Response({'total_revenue':round(revenue,2),'avg_order_value':round(avg_order_value,2),'total_orders':orders.count(),'pending_orders':orders.filter(status__in=['PENDING_PAYMENT','PAID','PROCESSING']).count(),'products_count':Product.objects.filter(seller=seller,is_deleted=False).count(),'store_name':seller.store_name})

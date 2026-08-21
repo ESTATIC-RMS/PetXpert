@@ -1,6 +1,6 @@
 from rest_framework import serializers
 import re
-from .models import User, VeterinarianProfile, VeterinarianReview
+from .models import User, VeterinarianProfile, VeterinarianReview, SellerProfile
 
 PHONE_REGEX = re.compile(r'^[\+]?[\d\s\-\(\)]{7,20}$')
 LICENSE_REGEX = re.compile(r'^[A-Za-z0-9\-\/]{4,50}$')
@@ -199,4 +199,90 @@ class VeterinarianReviewSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("You have already reviewed this appointment.")
 
         return data
+
+
+class SellerProfileSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
+    store_logo = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SellerProfile
+        fields = [
+            'id', 'user', 'store_name', 'store_description', 'store_logo',
+            'phone_number', 'address', 'account_number', 'is_verified',
+            'total_products', 'total_sales', 'avg_rating',
+        ]
+        read_only_fields = ['id', 'user', 'is_verified', 'total_products', 'total_sales', 'avg_rating']
+
+    def get_store_logo(self, obj):
+        request = self.context.get('request')
+        if obj.store_logo:
+            if request:
+                return request.build_absolute_uri(obj.store_logo.url)
+            return obj.store_logo.url
+        return None
+
+
+class SellerProfileUpdateSerializer(serializers.ModelSerializer):
+    store_logo = serializers.ImageField(required=False, allow_null=True)
+
+    class Meta:
+        model = SellerProfile
+        fields = [
+            'store_name', 'store_description', 'store_logo',
+            'phone_number', 'address', 'account_number',
+        ]
+
+    def to_internal_value(self, data):
+        # Handle both QueryDict (from FormData) and dict (from JSON)
+        if hasattr(data, 'getlist'):
+            # This is FormData
+            mutable_data = {}
+            for key in data.keys():
+                values = data.getlist(key)
+                if len(values) == 1:
+                    mutable_data[key] = values[0]
+                else:
+                    mutable_data[key] = values
+            data = mutable_data
+        return super().to_internal_value(data)
+
+    def _clean_text(self, value, field_label, min_len=1, max_len=None):
+        value = (value or '').strip()
+        if len(value) < min_len:
+            raise serializers.ValidationError(f'{field_label} is required.')
+        if max_len and len(value) > max_len:
+            raise serializers.ValidationError(f'{field_label} cannot exceed {max_len} characters.')
+        return value
+
+    def validate_store_name(self, value):
+        value = self._clean_text(value, 'Store name', min_len=2, max_len=255)
+        qs = SellerProfile.objects.filter(store_name__iexact=value)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError('This store name is already taken.')
+        return value
+
+    def validate_phone_number(self, value):
+        if value:
+            value = self._clean_text(value, 'Phone number', min_len=7, max_len=20)
+            if not PHONE_REGEX.match(value):
+                raise serializers.ValidationError('Enter a valid phone number (7-20 digits, may include +, spaces, or dashes).')
+        return value
+
+    def validate_account_number(self, value):
+        if value:
+            value = self._clean_text(value, 'Account number', min_len=5, max_len=50)
+        return value
+
+    def validate_store_logo(self, value):
+        if not value:
+            return value
+        if hasattr(value, 'size') and value.size > 5 * 1024 * 1024:
+            raise serializers.ValidationError('Store logo must be smaller than 5 MB.')
+        allowed = ('image/jpeg', 'image/png', 'image/webp', 'image/gif')
+        if hasattr(value, 'content_type') and value.content_type not in allowed:
+            raise serializers.ValidationError('Store logo must be a JPEG, PNG, WebP, or GIF image.')
+        return value
 

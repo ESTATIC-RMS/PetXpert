@@ -15,7 +15,7 @@ from django.utils.encoding import force_bytes, force_str
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from .models import User, UserRole, VeterinarianProfile, VeterinarianReview, SellerProfile
-from .serializers import UserSerializer, VeterinarianProfileSerializer, VeterinarianProfileCompletionSerializer, VeterinarianReviewSerializer
+from .serializers import UserSerializer, VeterinarianProfileSerializer, VeterinarianProfileCompletionSerializer, VeterinarianReviewSerializer, SellerProfileSerializer, SellerProfileUpdateSerializer
 from apps.core.permissions import IsPetOwner, IsVeterinarian, IsPetOwnerOrVeterinarian, IsCommunityMember
 
 
@@ -261,6 +261,47 @@ class VeterinarianListView(APIView):
         vets = VeterinarianProfile.objects.select_related('user').all()
         serializer = VeterinarianProfileSerializer(vets, many=True)
         return Response(serializer.data)
+
+
+class SellerProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def get(self, request):
+        user = request.user
+        if user.role != UserRole.SELLER:
+            return Response({'error': 'Only sellers can access this profile'}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            profile = user.seller_profile
+        except SellerProfile.DoesNotExist:
+            profile = SellerProfile.objects.create(user=user)
+
+        serializer = SellerProfileSerializer(profile)
+        return Response(serializer.data)
+
+    def put(self, request):
+        user = request.user
+        if user.role != UserRole.SELLER:
+            return Response({'error': 'Only sellers can update this profile'}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            profile = user.seller_profile
+        except SellerProfile.DoesNotExist:
+            profile = SellerProfile.objects.create(user=user)
+
+        # Handle both JSON and FormData requests
+        if request.content_type.startswith('multipart/form-data'):
+            serializer = SellerProfileUpdateSerializer(profile, data=request.data, partial=True)
+        else:
+            serializer = SellerProfileUpdateSerializer(profile, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            profile.refresh_from_db()
+            response_serializer = SellerProfileSerializer(profile)
+            return Response(response_serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class VeterinarianReviewListCreateView(APIView):

@@ -4,7 +4,7 @@ from .views import (
     UserProfileView, VeterinarianProfileImageUploadView, VeterinarianProfileImageDeleteView,
     VeterinarianProfileUpdateView, VeterinarianListView,
     VeterinarianReviewListCreateView, VeterinarianReviewDetailView,
-    UserReviewListView, AppointmentReviewView, ForgotPasswordView
+    UserReviewListView, AppointmentReviewView, ForgotPasswordView, SellerProfileView
 )
 
 urlpatterns = [
@@ -23,6 +23,9 @@ urlpatterns = [
     path('profile/vet/update/', VeterinarianProfileUpdateView.as_view(), name='vet_profile_update'),
     path('profile/vet/avatar/upload/', VeterinarianProfileImageUploadView.as_view(), name='vet_profile_image_upload'),
     path('profile/vet/avatar/delete/', VeterinarianProfileImageDeleteView.as_view(), name='vet_profile_image_delete'),
+
+    # Seller Profile
+    path('profile/seller/', SellerProfileView.as_view(), name='seller_profile'),
     
     # Reviews
     path('veterinarians/<uuid:veterinarian_id>/reviews/', VeterinarianReviewListCreateView.as_view(), name='vet_review_list_create'),

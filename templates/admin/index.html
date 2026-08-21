@@ -130,7 +130,7 @@
                 <span class="material-symbols-outlined text-base text-primary-600">person_add</span>
                 {% trans "Recent Users" %}
             </div>
-            <div class="px-panel-body">
+            <div class="px-panel-body" style="max-height: 300px; overflow-y: auto; overflow-x: auto;">
                 {% if recent_users %}
                 <table>
                     <thead>
@@ -173,7 +173,7 @@
                 <span class="material-symbols-outlined text-base text-primary-600">receipt_long</span>
                 {% trans "Recent Orders" %}
             </div>
-            <div class="px-panel-body">
+            <div class="px-panel-body" style="max-height: 300px; overflow-y: auto; overflow-x: auto;">
                 {% if recent_orders %}
                 <table>
                     <thead>
@@ -225,7 +225,7 @@
                 <span class="material-symbols-outlined text-base text-primary-600">calendar_month</span>
                 {% trans "Recent Appointments" %}
             </div>
-            <div class="px-panel-body">
+            <div class="px-panel-body" style="max-height: 300px; overflow-y: auto; overflow-x: auto;">
                 {% if recent_appointments %}
                 <table>
                     <thead>

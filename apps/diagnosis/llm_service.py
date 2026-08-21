@@ -1,18 +1,36 @@
 from django.conf import settings
+from .utils import markdown_to_html
 
 
 SYSTEM_PROMPT = (
-    'You are PetXpert AI, a careful veterinary assistant. Provide concise, practical '
-    'education for pet owners, avoid definitive medical claims, and recommend a licensed '
-    'veterinarian for urgent symptoms or worsening conditions. '
-    'When continuing a conversation, do not re-introduce yourself or repeat your capabilities. '
-    'Respond directly to the user\'s latest message. '
-    'IMPORTANT: Keep ALL responses concise and to the point. Maximum 100-150 words per response. '
-    'Use bullet points for recommendations. Avoid lengthy explanations. '
-    'IMPORTANT: You must ONLY answer questions related to pets, animals, and veterinary care. '
-    'If a user asks about ANY other topic (cars, technology, cooking, etc.) in ANY language, '
-    'politely decline and explain that you are a veterinary assistant designed to help with pet-related questions only. '
-    'Do not provide advice on non-pet topics regardless of the language used.'
+    "You are PetXpert AI, a friendly and careful veterinary assistant. "
+
+    "Provide concise, practical, easy-to-understand general guidance "
+    "about pets, animals, and veterinary care. "
+
+    "Do not make definitive diagnoses or prescribe prescription medication "
+    "or dosages. Recommend veterinary care when symptoms are serious, "
+    "persistent, or worsening. "
+
+    "Respond naturally like a helpful ChatGPT-style assistant. "
+    "Do not unnecessarily repeat the user's question. "
+    "Do not introduce yourself unless specifically asked. "
+
+    "Keep responses between 60 and 150 words. "
+
+    "FORMAT: "
+    "Use Markdown formatting. "
+    "Use ### headings when multiple sections are useful. "
+    "Use bullet points with -. "
+    "Use **bold** for important information. "
+    "Leave blank lines between sections. "
+    "Do not generate HTML. "
+    "Do not use code blocks. "
+
+    "Only answer questions related to pets, animals, "
+    "and veterinary care. "
+    "For unrelated questions, politely explain that you "
+    "only help with pet-related topics."
 )
 
 
@@ -33,21 +51,64 @@ def _chat_completion(messages, temperature=0.3):
         return error
 
     try:
-        response = client.chat.completions.create(
-            model='llama-3.3-70b-versatile',
+        result = client.chat.completions.with_raw_response.create(
+            model='openai/gpt-oss-120b',
             messages=messages,
             temperature=temperature,
-            max_tokens=900,
+            max_tokens=400,
         )
+        # Get HTTP headers
+        headers = result.headers
+        print("\n=== Groq API Rate Limits ===")
+        print(
+            "Requests limit:",
+            headers.get("x-ratelimit-limit-requests", "N/A")
+        )
+        print(
+            "Requests remaining:",
+            headers.get("x-ratelimit-remaining-requests", "N/A")
+        )
+        print(
+            "Tokens limit:",
+            headers.get("x-ratelimit-limit-tokens", "N/A")
+        )
+        print(
+            "Tokens remaining:",
+            headers.get("x-ratelimit-remaining-tokens", "N/A")
+        )
+        print(
+            "Request reset:",
+            headers.get("x-ratelimit-reset-requests", "N/A")
+        )
+        print(
+            "Token reset:",
+            headers.get("x-ratelimit-reset-tokens", "N/A")
+        )
+        print("=============================\n")
+        # Convert raw response into normal ChatCompletion object
+        response = result.parse()
+        # Show token usage for this request
+        if response.usage:
+            print("=== Token Usage ===")
+            print("Prompt tokens:", response.usage.prompt_tokens)
+            print("Completion tokens:", response.usage.completion_tokens)
+            print("Total tokens:", response.usage.total_tokens)
+            print("===================\n")
         return response.choices[0].message.content.strip()
     except Exception as exc:
-        return f'Unable to get an AI response right now: {exc}'
+        print(f"Groq API Error: {exc}")
+        import traceback
+        traceback.print_exc()
+        return (
+            'The AI assistant is temporarily unavailable. '
+            'Please try again later or describe your pet\'s symptoms '
+            'for general guidance.'
+        )
 
 
 def explain_disease(disease_name, severity='', similarity=None):
     if not disease_name or disease_name == 'Unknown':
         return 'The model could not confidently identify a known disease. Please consult a veterinarian if symptoms are visible or persistent.'
-
     similarity_text = f' Cosine similarity: {similarity:.3f}.' if similarity is not None else ''
     prompt = (
         f'Explain the dog condition "{disease_name}" for a pet owner. Severity: {severity or "unspecified"}.'
@@ -64,13 +125,13 @@ def pet_chat(question):
     return _chat_completion([
         {'role': 'system', 'content': SYSTEM_PROMPT},
         {'role': 'user', 'content': question},
-    ], temperature=0.4)
+    ], temperature=0.5)
 
 
 def _generate_diagnosis_html(disease, similarity, user_message=''):
     """Generate structured HTML diagnosis report."""
     similarity_value = float(similarity) if similarity else 0.0
-    
+
     # Determine confidence level
     if similarity_value >= 0.8:
         confidence = "High"
@@ -81,11 +142,11 @@ def _generate_diagnosis_html(disease, similarity, user_message=''):
     else:
         confidence = "Low"
         confidence_color = "#EF4444"
-    
+
     # Check if this is a healthy condition
     healthy_keywords = ['healthy', 'normal', 'no issues', 'clear', 'good', 'fine']
     is_healthy = any(keyword in disease.lower() for keyword in healthy_keywords)
-    
+
     # Determine risk level - always Low for healthy conditions
     if is_healthy:
         risk = "Low"
@@ -99,9 +160,9 @@ def _generate_diagnosis_html(disease, similarity, user_message=''):
     else:
         risk = "Low"
         risk_emoji = "🟢"
-    
+
     confidence_percentage = int(similarity_value * 100)
-    
+
     prompt = f"""You are PetXpert AI, a professional veterinary assistant.
 
 Generate a concise, modern, and user-friendly diagnosis response.
@@ -129,7 +190,7 @@ Risk Level: {risk}
 
 Output Structure:
 
-� PetXpert AI Assessment
+🩺 PetXpert AI Assessment
 
 🩺 Result
 {disease}
@@ -137,7 +198,7 @@ Output Structure:
 📊 Confidence
 {confidence_percentage}% ({confidence} Confidence)
 
-� Summary
+📝 Summary
 One short sentence explaining the result in simple language.
 
 ✅ Recommended Care
@@ -149,14 +210,12 @@ One short sentence explaining the result in simple language.
 ⚠️ Seek Veterinary Care If
 {'' if is_healthy else '2-3 important warning signs (only if this is NOT a healthy condition)'}
 
-AI assessments are image-based and should not replace professional veterinary advice.
-
 Return the response in clean HTML format using:
 - Cards with light gray backgrounds
 - Icons/emojis
 - Colored badges
 - Modern responsive styling with padding and rounded corners"""
-    
+
     return _chat_completion([
         {'role': 'system', 'content': SYSTEM_PROMPT},
         {'role': 'user', 'content': prompt},
@@ -202,13 +261,15 @@ def assistant_reply(user_message, detection=None, history=None):
 
     if detection is None:
         messages = [{'role': 'system', 'content': SYSTEM_PROMPT}]
-        for item in history or []:
+        recent_history = (history or [])[-10:]
+        for item in recent_history:
             role = item.get('role')
             content = _strip_html(item.get('content') or item.get('text') or '')
             if role in ('user', 'assistant') and content:
                 messages.append({'role': role, 'content': content})
         messages.append({'role': 'user', 'content': user_message})
-        return _chat_completion(messages, temperature=0.4)
+        response = _chat_completion(messages, temperature=0.5)
+        return markdown_to_html(response)
 
     similarity = detection.get('similarity')
     similarity_text = f'{similarity:.3f}' if isinstance(similarity, (int, float)) else 'n/a'
@@ -217,12 +278,12 @@ def assistant_reply(user_message, detection=None, history=None):
         error_msg = 'The image-based detector is currently unavailable on the server. Please try again later or describe your pet\'s symptoms in text.'
         html_response = _generate_error_html(error_msg)
         return html_response
-    
+
     elif not detection.get('is_dog'):
         error_msg = 'The attached image does not appear to contain a dog. Our detector currently supports dogs only.'
         html_response = _generate_error_html(error_msg, include_tip=False)
         return html_response
-    
+
     else:
         disease = detection.get('disease', 'Unknown')
         if disease == 'Unknown':
